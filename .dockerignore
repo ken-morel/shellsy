@@ -1,5 +1,0 @@
-**/.*
-!**/.flake8
-!**/.coveragerc
-
-**/__pycache__

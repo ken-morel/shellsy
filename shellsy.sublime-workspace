@@ -1,0 +1,893 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"back",
+				"background-attachment"
+			],
+			[
+				"ba",
+				"background-position-x"
+			],
+			[
+				"bac",
+				"background-repeat"
+			],
+			[
+				"backgr",
+				"background-size"
+			],
+			[
+				"w3-pa",
+				"w3-padding-64"
+			],
+			[
+				"w3-padding-a",
+				"w3-padding-small"
+			],
+			[
+				"w3-bor",
+				"w3-border"
+			],
+			[
+				"w3-padd",
+				"w3-padding-small"
+			],
+			[
+				"w3-border-de",
+				"w3-border-deep-purple"
+			],
+			[
+				"scr",
+				"scroll-behavior"
+			],
+			[
+				"ret",
+				"return"
+			],
+			[
+				"for",
+				"forloop\tDjango template for loop"
+			],
+			[
+				"fon",
+				"font-family"
+			],
+			[
+				"font-",
+				"font-size"
+			],
+			[
+				"link",
+				"links\tlink - stylesheet"
+			],
+			[
+				"w3-bl",
+				"w3-blue"
+			],
+			[
+				"lt",
+				"lt\tLong Tag"
+			],
+			[
+				"__",
+				"__init__"
+			],
+			[
+				"w3-border-bl",
+				"w3-border-black"
+			],
+			[
+				"w3-pale-",
+				"w3-pale-green"
+			],
+			[
+				"w3-pale",
+				"w3-pale-blue"
+			],
+			[
+				"w3-cont",
+				"w3-container"
+			],
+			[
+				"di",
+				"display"
+			],
+			[
+				"N",
+				"NoneType"
+			],
+			[
+				"ty",
+				"types"
+			],
+			[
+				"No",
+				"NoneType"
+			],
+			[
+				"In",
+				"InternalAnnotationError"
+			],
+			[
+				"cod",
+				"code-block"
+			],
+			[
+				"Che",
+				"Checks"
+			],
+			[
+				"se",
+				"setter"
+			],
+			[
+				"Ann",
+				"AnnotationError"
+			],
+			[
+				"CH",
+				"Check"
+			],
+			[
+				"C",
+				"Checks"
+			],
+			[
+				"Ca",
+				"CastedAttr"
+			],
+			[
+				"pa",
+				"param"
+			],
+			[
+				"get",
+				"get_name"
+			],
+			[
+				"tr",
+				"try\tTry/Except/Else"
+			],
+			[
+				"Ch",
+				"CheckError"
+			],
+			[
+				"typ",
+				"typeMatch"
+			],
+			[
+				"re",
+				"resolveAnnotations"
+			],
+			[
+				"Fi",
+				"FileNotFoundError"
+			],
+			[
+				"ann",
+				"annotate"
+			],
+			[
+				"ma",
+				"maintainer_email="
+			],
+			[
+				"pr",
+				"project_dir"
+			],
+			[
+				"__p",
+				"__pyo_overloads_name__"
+			],
+			[
+				"__py",
+				"__pyo_overloads__"
+			],
+			[
+				"Di",
+				"ZeroDivisionError"
+			],
+			[
+				"py",
+				"python"
+			],
+			[
+				"Int",
+				"InternalAnnotationError"
+			],
+			[
+				"p",
+				"python"
+			],
+			[
+				"An",
+				"AnnotationResolutionError"
+			],
+			[
+				"A",
+				"AnnotationResolutionError"
+			],
+			[
+				"ch",
+				"checks_list"
+			],
+			[
+				"par",
+				"params"
+			],
+			[
+				"class",
+				"classmethod"
+			],
+			[
+				"__init",
+				"__init_subclass__"
+			],
+			[
+				"__a",
+				"__annotations__"
+			],
+			[
+				"V",
+				"Validator"
+			],
+			[
+				"ra",
+				"random_profile"
+			],
+			[
+				"if",
+				"ifmain\tif __name__ == '__main__'"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Anaconda Python Builder",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/User/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/User/Django.sublime-build",
+					"pylint"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Anaconda Python Builder",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				]
+			],
+			[
+				"Anaconda Python Builder",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Anaconda Python Builder",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sphinx.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Anaconda Python Builder",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sphinx.sublime-build",
+					""
+				]
+			],
+			[
+				"Anaconda Python Builder",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					""
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Run"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Test"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Install"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Cross-Compile (Interactive)"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/go.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sphinx.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/Golang Build/Go.sublime-build",
+				"Run"
+			]
+		],
+		[
+			[
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/Makefile/Make.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sphinx.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/User/sphinx.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/subliminal/Django.sublime-build",
+					""
+				],
+				[
+					"Packages/subliminal/Django.sublime-build",
+					"pylint"
+				],
+				[
+					"Packages/User/go.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sass.sublime-build",
+					""
+				],
+				[
+					"Packages/User/sphinx.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/User/go.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Sbook",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"color convert",
+				"Preferences: ColorConvert Settings"
+			],
+			[
+				"Install",
+				"Package Control: Install Package"
+			],
+			[
+				"color",
+				"SVG Viewer: Change Offline Converter"
+			],
+			[
+				"Package Control: I",
+				"Package Control: Install Package"
+			],
+			[
+				"html",
+				"HTMLBeautify"
+			],
+			[
+				"format",
+				"Formatter: Quick Options"
+			],
+			[
+				"formatter",
+				"Formatter: Quick Options"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"terminus op",
+				"Terminus: Open Default Shell in Tab (View)"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/C/shellsy"
+	],
+	"file_history":
+	[
+		"/C/ken-morel/README.md",
+		"/C/glance/railway.json",
+		"/C/glance/go.mod",
+		"/C/glance/Dockerfile",
+		"/C/glance/docs/configuration.md",
+		"/C/glance/glance.yml",
+		"/C/glance/Dockerfile.single-platform",
+		"/C/example/hello/hello.go",
+		"/C/go-test/server/main.go",
+		"/C/example/template/main.go",
+		"/C/go-test/server/templates/index.tmpl",
+		"/C/portfolio/src/index.html",
+		"/C/portfolio/src/app/app.component.html",
+		"/C/portfolio/src/app/app.component.ts",
+		"/C/go-test/main/tictactoe.go",
+		"/C/Sbook/sbook/templates/google-analytics.django",
+		"/C/Sbook/sbook/templates/fonts.django",
+		"/C/Sbook/note/templates/note-main.django",
+		"/C/portfolio/src/main.ts",
+		"/C/vercel/main.py",
+		"/C/vercel/views.py",
+		"/C/vercel/templates/index.html",
+		"/C/vercel/pypistats.py",
+		"/C/vercel/Procfile",
+		"/C/vercel/data.py",
+		"/C/vercel/templates/views/badge.svg",
+		"/C/vercel/vercel.json",
+		"/C/vercel/api/__init__.py",
+		"/C/vercel/requirements.txt",
+		"/C/vercel/vercel.sublime-project",
+		"/C/vercel/data/views.yaml",
+		"/C/Sbook/staticfiles/svg/regular/bell.svg",
+		"/C/vercel/wakatime.py",
+		"/C/vercel/secrets.py",
+		"/C/vercel/run.bat",
+		"/C/dashing/examples/demo.py",
+		"/C/pyoload/src/pyoload/__init__.py",
+		"/C/Users/CHEF SEC/AppData/Roaming/Python/Python311-32/site-packages/dashing/__init__.py",
+		"/C/pyoload/src/pyoload/taskama.sublime-workspace",
+		"/C/pyoload/docs/examples.rst",
+		"/C/pyoload/docs/conf.py",
+		"/C/pyoload/src/del.py.del",
+		"/C/pyoload/docs/api.rst",
+		"/C/pyoload/docs/index.rst",
+		"/C/pyoload/docs/usage.rst",
+		"/C/pyoload/docs/del.py",
+		"/C/Users/CHEF SEC/del.py",
+		"/C/Users/CHEF SEC/dash-test.py",
+		"/C/sublime_text/Data/Packages/User/ret.sublime-snippet",
+		"/C/sublime_text/Data/Packages/User/at.sublime-snippet",
+		"/C/sublime_text/Data/Packages/User/annotate.sublime-snippet",
+		"/C/pyoload/docs/build/html/usage.rst",
+		"/C/pyoload/docs/requirements.txt",
+		"/C/pyoload/docs/make.bat",
+		"/C/sublime_text/Data/Packages/User/sphinx.sublime-build",
+		"/C/pyoload/README.md",
+		"/C/pyoload/src/tests/test_check.py",
+		"/C/pyoload/src/tests/test_overload.py",
+		"/C/pyoload/src/tests/test_cast.py",
+		"/C/pyoload/src/tests/OverloadTest.py",
+		"/C/pyoload/src/setup.py",
+		"/C/pyoload/.github/workflows/python-publish.yml",
+		"/C/pyoload/src/tests/__init__.py",
+		"/C/pyoload/src/tests/test_place.py",
+		"/C/pyoload/src/tests/CheckTest.py",
+		"/C/pyoload/src/tests/CastTest.py",
+		"/C/pyoload/.github/workflows/test.yml",
+		"/C/pyoload/src/del.py",
+		"/C/pyoload/README.rst",
+		"/C/pyoload/.gitignore",
+		"/C/Users/CHEF SEC/pyoload-test.py",
+		"/C/sublime_text/Data/Packages/User/lt.sublime-snippet",
+		"/C/sublime_text/Data/Packages/User/gt.sublime-snippet",
+		"/C/Sbook/staticfiles/svg/solid/1.svg",
+		"/C/Users/CHEF SEC/test.py",
+		"/C/ken-morel/ama.svg",
+		"/C/pyoload/docs/Makefile",
+		"/C/pyoload/docker-compose.yml",
+		"/C/pyoload/.dockerignore",
+		"/C/pyoload/.github/workflows/pyre.yml",
+		"/C/pyoload/Makefile",
+		"/C/pyoload/.readthedocs.yaml",
+		"/C/pyoload/src/tests/test_placeholder.py",
+		"/C/pyoload/src/del.txt",
+		"/C/pyoload/docs/source/conf.py",
+		"/C/pyoload/docs/source/index.rst",
+		"/C/pyoload/docs/source/usage.rst",
+		"/C/pyoload/docs/source/api.rst",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/pyoload/__init__.py",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/README.md",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/setup.py",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/.coveragerc",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/.flake8",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/tests/test_placeholder.py",
+		"/C/Users/Lenovo 11e/Desktop/pyoload/src/del.py",
+		"/C/sublime_text/Data/Packages/User/py_complete.py",
+		"/C/Users/CHEF SEC/AppData/Roaming/Sublime Text/Local/Session.sublime_session",
+		"/C/Sbook/sbook/accounts.py",
+		"/C/Sbook/sbook/urls.py",
+		"/C/Sbook/sbook/views.py",
+		"/C/Sbook/sbook/templates/main.django",
+		"/C/Sbook/random_profile_image.py",
+		"/C/Sbook/sbook/templates/signup.django",
+		"/C/Sbook/Sbook.sublime-project",
+		"/C/Sbook/requirements.txt",
+		"/C/Sbook/note/accounts.py",
+		"/C/del/del/del/settings.py",
+		"/C/Sbook/sbook/settings.py",
+		"/C/Sbook/manage.py",
+		"/C/python-3.12.3-embed-win32/python312._pth",
+		"/C/Sbook/main.py"
+	],
+	"find":
+	{
+		"height": 27.0
+	},
+	"find_in_files":
+	{
+		"height": 101.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": true,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 39.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 126.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.golang_build":
+	{
+		"height": 126.0
+	},
+	"output.gotools_syntax_errors":
+	{
+		"height": 126.0
+	},
+	"pinned_build_system": "",
+	"project": "shellsy.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"C:\\Sbook\\Sbook.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 223.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
