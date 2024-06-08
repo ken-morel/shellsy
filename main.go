@@ -1,10 +1,16 @@
 package main
 
 import (
-  "github.com/ken-morel/shellsy/cmd"
-  // "github.com/spf13/cobra"
+    "C"
+    "fmt"
 )
 
-func main() {
-  cmd.Execute()
+//export TestFunc
+func TestFunc() {
+    fmt.Println("Hello World!")
 }
+
+func main() {
+
+}
+

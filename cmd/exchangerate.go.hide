@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	API = '3af8aa2e73c9f3045f0479a7'
-	URL = 'https://v6.exchangerate-api.com/v6/%v/latest/%v'
+	API string = "3af8aa2e73c9f3045f0479a7"
+	URL string = "https://v6.exchangerate-api.com/v6/%v/latest/%v"
 )
 
 func init() {
@@ -29,6 +29,6 @@ var dloadCmd = &cobra.Command{
 	Short: "exchange rate",
 	Long: "The exchange rate of the given currency",
 	Run: func(cmd *cobra.Command, args []string) {
-		url := fmt.Sprintf(URL, API, args[0]);
-	}
+		url := fmt.Sprintf(URL, API, args[0])
+	},
 }
