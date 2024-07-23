@@ -53,15 +53,16 @@ class Shell(Command):
                 rprompt=self.right_prompt,
                 enable_history_search=True,
                 history=self.history,
-                lexer=self.lexer,
+                lexer=self.lexer(),
                 message=self.name + "\n> ",
             )
+        return self.prompt_session.prompt()
 
     @get_input.fallback
     def raw_get_input(self):
+        print("main")
         return input(self.name + "> ")
 
-    @property
     @comberload(["pygments.lexer", "pygments.token"])
     def lexer(self):
         if self._lexer:
@@ -175,6 +176,10 @@ class Shell(Command):
         self._lexer = CustomLexer()
         return self._lexer
 
+    @lexer.fallback
+    def _(self):
+        return None
+
     def bottom_toolbar(self):
         return "bottom_toolbar"
 
@@ -200,5 +205,5 @@ class Shell(Command):
         self.should_run = True
         while self.should_run:
             text = self.get_input()
-            if text:
-                self.entrypoint(text)
+            print(text)
+            self.entrypoint(text)

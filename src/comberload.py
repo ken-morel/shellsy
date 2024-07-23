@@ -27,10 +27,9 @@ class ComberloadModule(ModuleType):
             # wraps(func)(self.__call__)
 
         def call(self, *args, **kw):
-            if self._fallback:
-                return self._fallback(*args, **kw)
-            else:
-                return self.default
+            if self._fallback is None:
+                raise RuntimeError(f"fallback not set on {self.__func__}")
+            return self._fallback(*args, **kw)
 
         def fallback(self, func: Callable):
             self._fallback = func
@@ -48,7 +47,6 @@ class ComberloadModule(ModuleType):
 
     def __init__(self):
         super().__init__(__name__)
-        self.start_worker()
 
     def __str__(self):
         return "<Comberload module>"
