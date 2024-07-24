@@ -49,10 +49,8 @@ class Shell(Command):
             self.commands = {}
 
     @comberload(
-        [
-            "prompt_toolkit.key_binding",
-            "prompt_toolkit.application",
-        ]
+        "prompt_toolkit.key_binding",
+        "prompt_toolkit.application",
     )
     def key_bindings(self):
         if self._bindings is not None:
@@ -146,11 +144,9 @@ class Shell(Command):
         )
 
     @comberload(
-        [
-            "prompt_toolkit",
-            "prompt_toolkit.styles",
-            "prompt_toolkit.history",
-        ]
+        "prompt_toolkit",
+        "prompt_toolkit.styles",
+        "prompt_toolkit.history",
     )
     def get_input(self):
         import prompt_toolkit
@@ -183,7 +179,7 @@ class Shell(Command):
     def raw_get_input(self):
         return input(self.name + "> ")
 
-    @comberload(["pygments.lexer", "pygments.token"])
+    @comberload("pygments.lexer", "pygments.token")
     def lexer(self):
         if self._lexer:
             return self._lexer

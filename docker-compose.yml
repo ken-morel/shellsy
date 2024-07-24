@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+    volumes:
+      - ./src:/src
+      - ./README.rst:/src/README.rst
+      - ./LICENSE:/src/LICENSE
+      
+  test38:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+      args:
+        PYTHON_VERSION: '3.8'
+    command: pytest
+    
+  test39:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+      args:
+        PYTHON_VERSION: '3.9'
+    command: pytest
+    
+  test310:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+      args:
+        PYTHON_VERSION: '3.10'
+    command: pytest
+    
+  test311:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+      args:
+        PYTHON_VERSION: '3.11'
+    command: pytest
+
+  test312:
+    build:
+      context: .
+      dockerfile: dockerfiles/dev.dockerfile
+      args:
+        PYTHON_VERSION: '3.12'
+    command: pytest

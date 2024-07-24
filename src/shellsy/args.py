@@ -219,6 +219,8 @@ class CommandParameters:
                 raise ValueError(f"missing argument for {param}")
 
         for param, val in kwargs.items():
+            if val == param.default:
+                continue
             if param.type is not _empty and not isinstance(val, param.type):
                 idx = -1
                 if val in args.args:
