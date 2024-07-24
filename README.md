@@ -109,3 +109,74 @@ F:\shellsy\src> cmd
 > echo 3,5,-45,23,34
 Point(3.0, 5.0, -45.0, 23.0, 34.0)
 ```
+
+
+### bultins True, False, and Nil
+
+no need explain that.
+`Nil` emulates python None, but preserves from confusion like in case
+of function default values, to know if a value hav actually being passed
+
+
+### Expression
+
+permit you to enter expressions into shellsy
+they have the syntax `(>text...)`, where '>' is the expression prefix,
+and text the expression body. Each Expression.Evaluator has it's own prefix
+attribute which deserves it to evaluate the string.
+
+To add a custom evaluator, this is a snippet from args.py
+
+```python
+class PythonEvaluator(Expression.Evaluator):
+    prefix = ">"
+
+    def evaluate(self):
+        return eval(self.string, self.context)
+```
+
+```bash
+F:\shellsy\src> shellsy
+> echo (>2 == 3)
+<Expression(>:2 == 3)>
+```
+
+### block
+
+represents a code block, constitutes of curly braces
+
+```bash
+F:\shellsy\src> shellsy
+> echo {echo 3}
+<Commands{<Command:echo((3,), {})>}>
+```
+
+
+# Builtin commands
+
+## if
+syntaxes `if (condition) {block1} {optional block2}`
+```bash
+F:\shellsy\src> shellsy
+> if (>True) {print 'True is True!'} {print 'True is then not True?'}
+'True is True!'
+None
+F:\shellsy\src> shellsy
+> if (>not True) {print 'True is True!'} {print 'True is then not True?'}
+'True is then not True?'
+None
+```
+
+# cd and chdir
+
+```bash
+F:\shellsy\src> shellsy
+> cd
+F:\shellsy\src
+F:\shellsy\src> shellsy
+> cd /C:/Users/CHEF SEC/
+C:\Users\CHEF SEC
+%USERPROFILE%> shellsy
+> cd
+C:\Users\CHEF SEC
+```
