@@ -4,6 +4,8 @@ from .args import *
 from pyoload import *
 from typing import Callable
 from typing import Iterable
+from .settings import *
+from inspect import _empty
 
 
 class NoSuchCommand(ValueError):
@@ -19,21 +21,13 @@ class Command:
         self.__func__ = func
 
     @annotate
-    def __call__(self, args: Arguments):
+    def __call__(self, shell, args: Arguments):
         args = self.params.bind(args)
-        self.__func__(**args)
-
-    def __set_name__(self, obj, name: str, typo=None):
-        if not hasattr(obj, "commands"):
-            obj.commands = {}
-        self.name = name
-        obj.commands[name] = self
+        return self.__func__(shell, **args)
 
 
 class Shell(Command):
-    history = os.path.realpath(
-        os.path.join(os.path.dirname(__file__), "history.txt")
-    )
+    history = os.path.join(data_dir, "history.txt")
     prompt_session = None
     _lexer = None
     _bindings = None
@@ -46,6 +40,23 @@ class Shell(Command):
             self.subshells = {}
         if not hasattr(self, "commands"):
             self.commands = {}
+
+        for attr in dir(self):
+            if attr.startswith("__"):
+                continue
+            try:
+                if isinstance(cmd := getattr(self, attr), Command):
+                    cmd.shell = self
+                    if attr[0] == "_":
+                        attr = attr[1:]
+                    self.commands[attr] = cmd
+                elif issubclass(subcls := getattr(self, attr), Shell):
+                    subcls.shell = self
+                    if attr[0] == "_":
+                        attr = attr[1:]
+                    self.subshells[attr] = subcls()
+            except (AttributeError, TypeError):
+                pass
 
     @comberload(
         "prompt_toolkit.key_binding",
@@ -72,7 +83,9 @@ class Shell(Command):
         @bindings.add("c-c")
         def _(event):
             "Exit when `c-x` is pressed."
-            print("exiting gracefully")
+            def print_hello():
+                print("exiting gracefully!")
+            run_in_terminal(print_hello)
             event.app.exit()
 
         @bindings.add("c-space")
@@ -91,14 +104,7 @@ class Shell(Command):
     def nested_completer(self):
         from prompt_toolkit.completion import NestedCompleter
 
-        completions = {
-            "show": {
-                "version": None,
-                "clock": None,
-                "ip": {"interface": {"brief"}},
-            },
-            "exit": None,
-        }
+        completions = {x: None for x in self.get_possible_subcommands()}
         return NestedCompleter.from_nested_dict(completions)
 
     def format_cwd(self):
@@ -111,12 +117,12 @@ class Shell(Command):
             if (
                 cwd.startswith(path)
                 and len(path) > len(name) + 2
-                and len(path) > shortens[1]
+                and len(path) > len(shortens[1])
             ):
                 shortens = (name, path)
         if shortens[0]:
             return [
-                ("class:envpath", "%" + shortens[1] + "%"),
+                ("class:envpath", "%" + shortens[0] + "%"),
                 ("class:cwdpath", cwd[len(shortens[1]) :]),
             ]
         else:
@@ -125,6 +131,7 @@ class Shell(Command):
 
     def get_styles(self):
         from prompt_toolkit.styles import Style
+
         return Style.from_dict(
             {
                 # "": "#ffffff",
@@ -134,11 +141,14 @@ class Shell(Command):
                 "cwdpath": "#ffff45",
                 "prompt": "#00aa00",
                 "path": "ansicyan underline",
-                'pygments.keyword': 'underline',
-                'pygments.name.function': 'underline reverse',
-                'pygments.literal.string': '#ffff00',
-                'pygments.punctuation': '#ff0000',
-                'pygments.error': 'bg:#ff0000 underline',
+                "pygments.keyword": "underline",
+                "pygments.name.function": "underline reverse",
+                "pygments.name.label": "#ff7700 underline",
+                "pygments.literal.string": "#ffff00",
+                "pygments.literal.number": "#ff77ff",
+                "pygments.literal.number.float": "#770077",
+                "pygments.punctuation": "#ff0000",
+                "pygments.error": "bg:#ff0000 underline",
             }
         )
 
@@ -157,7 +167,7 @@ class Shell(Command):
             validate_while_typing=True,
             bottom_toolbar=self.bottom_toolbar,
             rprompt=self.right_prompt,
-            enable_history_search=True,
+            # enable_history_search=True,
             history=FileHistory(self.history),
             lexer=self.lexer(),
             message=[
@@ -208,8 +218,8 @@ class Shell(Command):
             Number,
             Generic,
             Error,
+            Literal,
         )
-
         class CustomLexer(RegexLexer):
             name = self.name
             aliases = [""]
@@ -228,32 +238,77 @@ class Shell(Command):
 
             commenthelp = ["help"]
 
+            commands = [
+                *[
+                    (
+                        r"(" + command.replace(".", "\\.") + "\\b)",
+                        Name.Function,
+                    )
+                    for command in self.get_possible_subcommands()
+                ],
+                (
+                    r"^(\$)([\w_]+)\s*(\:)",
+                    bygroups(Punctuation, Name.Variable, Keyword),
+                ),
+                (r"^([\w._]+)", Error),
+                (r"True|False|Nil", Keyword),
+                (
+                    r"(\()(.)(.*)(\))",
+                    bygroups(
+                        Punctuation, Keyword, String.Single, Punctuation
+                    ),
+                ),
+                (
+                    r"(?<!^)(\$)([\w_]+)",
+                    bygroups(Punctuation, Name.Variable),
+                ),
+                # Double quoted strings (e.g., "arg1 string")
+                (
+                    r"(')([^']*)(')",
+                    bygroups(Punctuation, String.Single, Punctuation),
+                ),
+                (
+                    r'(")([^"]*)(")',
+                    bygroups(Punctuation, String.Double, Punctuation),
+                ),
+                (
+                    r"(-?[\d.]+)(\:)(-?[\d.]+)(\:)(-?[\d.]+)",
+                    bygroups(
+                        Literal.Number,
+                        Punctuation,
+                        Literal.Number,
+                        Punctuation,
+                        Literal.Number,
+                    ),
+                ),
+                (
+                    r"(-?[\d.]+)(\:)(-?[\d.]+)",
+                    bygroups(Literal.Number, Punctuation, Literal.Number),
+                ),
+                (r"-?[\d.]+(?:,-?[\d.]+)+", Literal.Number),
+                (r"-?\d+", Number),
+                (r"-?[\d.]+", Literal.Number.Float),
+                (r"(-)(\w+)", bygroups(Punctuation, Name.Label)),
+                (r"/", Punctuation, "pathcontent"),
+                (r"(?<!\s)\s(?!\s)", Generic),
+            ]
+
             tokens = {
                 "root": [
-                    *[
-                        (
-                            "^(" + command.replace(".", "\\.") + "\\b)",
-                            Name.Function,
-                        )
-                        for command in self.get_possible_subcommands()
-                    ],
-                    (r"^([\w._]+)", Error),
-                    # Double quoted strings (e.g., "arg1 string")
-                    (r'"[^"]*"', String.Double),
-                    # Single quoted strings (e.g., 'arg1 string')
-                    (r"'[^']*'", String.Single),
-                    # Numbers (e.g., 123)
-                    (r"(\d+)", Number),
-                    (r"(\d+x\d+)", Number),
-                    (r"(/)", Punctuation, 'pathcontent'),
-                    (r"(?<!\s)\s(?!\s)", Generic),
+                    (r"\{", Punctuation, "commandblock"),
+                    *commands,
                 ],
-                'pathcontent': [
+                "pathcontent": [
                     (r"\w\:", Name.Namespace),
-                    (r"(/)(?=\w|\d|_|\-)", Operator),
+                    (r"/(?=\w|\d|_|\-)", Operator),
                     (r"[\w\d_\-\s]+", Generic),
                     (r"\.[\w_\-]+(?=/)", Name.Namespace),
-                    (r"(/)(?=\s|\b|$)", Punctuation, "#pop"),
+                    (r"/(?=\s|\b|$)", Punctuation, "#pop"),
+                ],
+                "commandblock": [
+                    (r"\}", Punctuation, "#pop"),
+                    (r";", Punctuation),
+                    *commands,
                 ]
             }
 
@@ -275,20 +330,23 @@ class Shell(Command):
         return "rptompt"
 
     @annotate
-    def __call__(self, args: str | Iterable[str] = ""):
+    def __call__(self, args: str | Iterable[str] = "", loop: bool = True):
         if isinstance(args, str):
             args = CommandCall.from_string(args)
         else:
             args = CommandCall.from_string_parts(args)
         if args.command:
-            self.call(args)
+            return self.call(args)
+        elif loop:
+            return self.cmdloop()
         else:
-            self.cmdloop()
+            return None
 
+    @annotate
     def call(self, call: CommandCall):
         name, inner = call.inner()
         if name in self.commands:
-            return self.commands[name](inner.arguments)
+            return self.commands[name](self, inner.arguments)
         elif name in self.subshells:
             return self.subshells[name].call(inner)
         else:
@@ -301,15 +359,15 @@ class Shell(Command):
                 text = self.get_input()
                 if text is None:
                     break
-                call = CommandCall.from_string(text)
-                self.call(call)
-            except (NoSuchCommand, ArgumentTypeMismatch) as e:
+                else:
+                    call = CommandCall.from_string(text)
+                    ret = self.call(call)
+                    print(ret)
+            except (
+                NoSuchCommand,
+                ArgumentTypeMismatch,
+                ShellsyNtaxError,
+            ) as e:
                 e.show()
             # except Exception as e:
             #     print(e)
-
-    def __set_name__(self, obj, name: str, typo=None):
-        if not hasattr(obj, "subshells"):
-            obj.subshells = {}
-        self.name = name
-        obj.subshells[name] = self

@@ -1,10 +1,3 @@
-from shellsy import Shell, Command
+from shellsy import Shellsy
 
-
-class Cmd(Shell):
-    @Command
-    def echo(val):
-        print(repr(val))
-
-
-Cmd()()
+Shellsy()()

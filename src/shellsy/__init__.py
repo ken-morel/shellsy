@@ -1,22 +1,64 @@
 from pathlib import Path
 import os
-from .shell import Command
-from .shell import Shell
+from .shell import *
 
 
 class Shellsy(Shell):
     """
     Welcome, to shellsy, here you will build simple tools
     """
+
     @Command
-    def cd(path: Path = None):
+    def cd(shell, path: Path = None):
         """
         The command utility
         """
         if path:
-            os.chdir(path)
+            try:
+                os.chdir(path)
+            except Exception as e:
+                print(e)
+        return Path(os.getcwd())
+
+    chdir = cd
+
+    @Command
+    def echo(shell, val):
+        return repr(val)
+
+    @Command
+    def print(shell, val):
+        return print(repr(val))
+
+    @Command
+    def var(shell, var: Variable, val=None):
+        if val is not None:
+            var(val)
+        return var
+
+    @Command
+    def _if(
+        shell,
+        condition: Expression,
+        then: CommandBlock,
+        else_: CommandBlock = None,
+    ):
+        if condition():
+            return then.evaluate(shell)
         else:
-            print(os.getcwd())
+            if else_ is not None:
+                return else_.evaluate(shell)
+            return None
+
+    class Config(Shell):
+        @Command
+        def set(shell, name: str, val):
+            settings[name] = val
+            return settings.get(name)
+
+        @Command
+        def get(shell, name: str):
+            return settings.get(name)
 
 
 __version__ = "1.0.0"
