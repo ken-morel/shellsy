@@ -1,9 +1,6 @@
 import comberload
-
-from .args import Arguments
-from .args import CommandCall
-from .args import CommandParameters
-from pathlib import Path
+import os
+from .args import *
 from pyoload import *
 from typing import Callable
 from typing import Iterable
@@ -22,8 +19,7 @@ class Command:
         self.__func__ = func
 
     @annotate
-    def __call__(self, args: Iterable[str]):
-        args = Arguments.from_string_parts(args)
+    def __call__(self, args: Arguments):
         args = self.params.bind(args)
         self.__func__(**args)
 
@@ -36,7 +32,9 @@ class Command:
 
 @annotate
 class Shell(Command):
-    history = Path("./history.txt")
+    history = os.path.realpath(
+        os.path.join(os.path.dirname(__file__), "history.txt")
+    )
     prompt_session = None
     _lexer = None
     _bindings = None
@@ -106,6 +104,47 @@ class Shell(Command):
         }
         return NestedCompleter.from_nested_dict(completions)
 
+    def format_cwd(self):
+        import os
+        from os import path
+
+        cwd = os.getcwd()
+        shortens = ("", "")
+        for name, path in os.environ.items():
+            if (
+                cwd.startswith(path)
+                and len(path) > len(name) + 2
+                and len(path) > shortens[1]
+            ):
+                shortens = (name, path)
+        if shortens[0]:
+            return [
+                ("class:envpath", "%" + shortens[1] + "%"),
+                ("class:cwdpath", cwd[len(shortens[1]) :]),
+            ]
+        else:
+            drive, path = os.path.splitdrive(cwd)
+            return [("class:drivename", drive), ("class:cwdpath", path)]
+
+    def get_styles(self):
+        from prompt_toolkit.styles import Style
+        return Style.from_dict(
+            {
+                # "": "#ffffff",
+                "shellname": "#884444",
+                "envpath": "#88ffaa",
+                "drivename": "#0077ff",
+                "cwdpath": "#ffff45",
+                "prompt": "#00aa00",
+                "path": "ansicyan underline",
+                'pygments.keyword': 'underline',
+                'pygments.name.function': 'underline reverse',
+                'pygments.literal.string': '#ffff00',
+                'pygments.punctuation': '#ff0000',
+                'pygments.error': 'bg:#ff0000 underline',
+            }
+        )
+
     @comberload(
         [
             "prompt_toolkit",
@@ -115,10 +154,10 @@ class Shell(Command):
     )
     def get_input(self):
         import prompt_toolkit
-        from prompt_toolkit.styles import Style
         from prompt_toolkit.history import FileHistory
         from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
+        cwd = self.format_cwd()
         return prompt_toolkit.prompt(
             validate_while_typing=True,
             bottom_toolbar=self.bottom_toolbar,
@@ -127,19 +166,13 @@ class Shell(Command):
             history=FileHistory(self.history),
             lexer=self.lexer(),
             message=[
+                *cwd,
+                ("", "> "),
                 ("class:shellname", self.name),
                 ("", "\n"),
                 ("class:prompt", "> "),
             ],
-            style=Style.from_dict(
-                {
-                    "": "#ffffff",
-                    "shellname": "#884444",
-                    "prompt": "#00aa00",
-                    "host": "#00ffff bg:#444400",
-                    "path": "ansicyan underline",
-                }
-            ),
+            style=self.get_styles(),
             completer=self.nested_completer(),
             auto_suggest=AutoSuggestFromHistory(),
             mouse_support=True,
@@ -179,6 +212,7 @@ class Shell(Command):
             String,
             Number,
             Generic,
+            Error,
         )
 
         class CustomLexer(RegexLexer):
@@ -208,14 +242,24 @@ class Shell(Command):
                         )
                         for command in self.get_possible_subcommands()
                     ],
+                    (r"^([\w._]+)", Error),
                     # Double quoted strings (e.g., "arg1 string")
                     (r'"[^"]*"', String.Double),
                     # Single quoted strings (e.g., 'arg1 string')
                     (r"'[^']*'", String.Single),
                     # Numbers (e.g., 123)
-                    (r"\d+", Number),
-                    (r"\d+x\d+", Generic),
+                    (r"(\d+)", Number),
+                    (r"(\d+x\d+)", Number),
+                    (r"(/)", Punctuation, 'pathcontent'),
+                    (r"(?<!\s)\s(?!\s)", Generic),
                 ],
+                'pathcontent': [
+                    (r"\w\:", Name.Namespace),
+                    (r"(/)(?=\w|\d|_|\-)", Operator),
+                    (r"[\w\d_\-\s]+", Generic),
+                    (r"\.[\w_\-]+(?=/)", Name.Namespace),
+                    (r"(/)(?=\s|\b|$)", Punctuation, "#pop"),
+                ]
             }
 
         self._lexer = PygmentsLexer(CustomLexer)
@@ -262,7 +306,7 @@ class Shell(Command):
                 text = self.get_input()
                 call = CommandCall.from_string(text)
                 self.call(call)
-            except NoSuchCommand as e:
+            except (NoSuchCommand, ArgumentTypeMismatch) as e:
                 e.show()
             # except Exception as e:
             #     print(e)

@@ -1,4 +1,3 @@
-from .types import *
 from inspect import _empty
 from inspect import ismethod
 from inspect import signature
@@ -6,28 +5,31 @@ from pyoload import *
 from typing import Callable
 from typing import Iterable
 from typing import Type
+from pathlib import Path
+from decimal import Decimal
 
 
-class Literal:
-    pass
+class ArgumentTypeMismatch(TypeError):
+    def __init__(self, param, val, pos=-1):
+        self.param = param
+        self.val = val
+        self.pos = pos
+
+    def show(self):
+        msg = (
+            f"Value {self.val!r} does not match spec of parameter {self.param}"
+        )
+        if self.pos > -1:
+            msg += f"(Positional argument {self.pos})"
+        print(msg)
 
 
-class Int(Literal, int):
-    @classmethod
-    def from_string(cls, str):
-        return cls(str)
+class ShellsyNtaxError(SyntaxError):
+    def show(self):
+        print(self)
 
 
-class Float(Literal, Decimal):
-    @classmethod
-    def from_string(cls, str):
-        return cls(str)
-
-
-class Str(Literal, str):
-    @classmethod
-    def from_string(cls, str):
-        return cls(str)
+Literal = int | Decimal | Path | str
 
 
 @annotate
@@ -38,13 +40,15 @@ def evaluate_literal(string: str) -> Literal:
     string_set = set(string)
 
     if len(string_set - digits) == 0:
-        return Int(string)
+        return int(string)
     elif len(string_set - decimals) == 0:
-        return Float(string)
+        return Decimal(string)
     elif string[0] in string_quotes:
         if string[0] != string[-1]:
-            raise SyntaxError("unterminated string literal")
-        return Str(string[1:-1])
+            raise ShellsyNtaxError(f"unterminated string literal:{string!r}")
+        return str(string[1:-1])
+    if string[0] == string[-1] == "/":
+        return Path(string[1:-1])
     raise ValueError(string)
 
 
@@ -63,7 +67,40 @@ class Arguments:
         string_parts = [""]
         # split string
         while pos < len(string):
-            if string[pos].isspace():
+            if string[pos] in ("'\""):
+                quote = string[pos]
+                text = quote
+                pos += 1
+                while pos < len(string):
+                    if string[pos] == "\\":
+                        if len(string) == pos + 1:
+                            raise ShellsyNtaxError(
+                                f"Escaped nothing at end of string:{string!r}"
+                            )
+                        elif string[pos + 1] in ("'\"\\"):
+                            text += string[pos + 1]
+                            pos += 2
+                        else:
+                            raise ShellsyNtaxError(
+                                f"unknown escape {string[pos:pos+2]!r} in {string!r}"
+                            )
+                    elif string[pos] == quote:
+                        pos += 1
+                        break
+                    else:
+                        text += string[pos]
+                        pos += 1
+                string_parts.append(text + quote)
+            elif string[pos] == "/":
+                begin = pos
+                pos += 1
+                while pos < len(string) and not (
+                    string[pos] == "/"
+                    and (len(string) == pos + 1 or string[pos + 1].isspace())
+                ):
+                    pos += 1
+                string_parts.append(string[begin:pos + 1])
+            elif string[pos].isspace():
                 string_parts.append("")
             else:
                 string_parts[-1] += string[pos]
@@ -164,8 +201,8 @@ class CommandParameters:
         params = []
         for name, param in signature(func).parameters.items():
             params.append(CommandParameter.from_inspect_parameter(param))
-        if ismethod(func):
-            params.pop(0)
+        # if len(params) > 0 and params[0].name == "self":
+        #     params.pop(0)
         return cls(params)
 
     @annotate
@@ -181,10 +218,13 @@ class CommandParameters:
             else:
                 raise ValueError(f"missing argument for {param}")
 
-        for param, val in kwargs.values():
+        for param, val in kwargs.items():
             if param.type is not _empty and not isinstance(val, param.type):
-                raise TypeError(f"non matchin types from {val=} to {param=}")
-        return kwargs
+                idx = -1
+                if val in args.args:
+                    idx = args.args.index(val)
+                raise ArgumentTypeMismatch(param, val)
+        return {x.name: y for x, y in kwargs.items()}
 
     def __str__(self):
         return f"<CommandParameters:[{', '.join(map(str, self.params))}]>"
