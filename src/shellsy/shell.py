@@ -304,6 +304,8 @@ class Shell(Command):
         while self.should_run:
             try:
                 text = self.get_input()
+                if text is None:
+                    break
                 call = CommandCall.from_string(text)
                 self.call(call)
             except (NoSuchCommand, ArgumentTypeMismatch) as e:
