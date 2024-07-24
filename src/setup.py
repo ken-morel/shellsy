@@ -11,7 +11,7 @@ from shellsy import __version__
 project_dir = Path(__file__).parent
 
 
-class SellsyInstallCommand(install):
+class ShellsyInstallCommand(install):
     def run(self):
         from appdirs import user_data_dir
 
