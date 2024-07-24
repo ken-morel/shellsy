@@ -9,6 +9,23 @@ from pathlib import Path
 from decimal import Decimal
 
 
+class Point(tuple):
+    @property
+    def x(self):
+        return self[0]
+
+    @property
+    def y(self):
+        return self[1]
+
+    @property
+    def z(self):
+        return self[2]
+
+    def __repr__(self):
+        return f"Point{tuple.__repr__(self)}"
+
+
 class ArgumentTypeMismatch(TypeError):
     def __init__(self, param, val, pos=-1):
         self.param = param
@@ -29,15 +46,17 @@ class ShellsyNtaxError(SyntaxError):
         print(self)
 
 
-Literal = int | Decimal | Path | str
+Literal = int | Decimal | Path | str | slice | Point
 
 
 @annotate
 def evaluate_literal(string: str) -> Literal:
-    digits = set("01234567890eE")
+    digits = set("01234567890e-E")
     decimals = digits | set(".")
     string_quotes = set("'\"")
     string_set = set(string)
+    slice_set = digits | set(":")
+    point_set = digits | set(",")
 
     if len(string_set - digits) == 0:
         return int(string)
@@ -47,9 +66,13 @@ def evaluate_literal(string: str) -> Literal:
         if string[0] != string[-1]:
             raise ShellsyNtaxError(f"unterminated string literal:{string!r}")
         return str(string[1:-1])
-    if string[0] == string[-1] == "/":
+    elif string[0] == string[-1] == "/":
         return Path(string[1:-1])
-    raise ValueError(string)
+    elif string.count(":") == 2 and len(string_set - slice_set) == 0:
+        return slice(*map(int, string.split(":")))
+    elif len(string_set - point_set) == 0:
+        return Point(map(float, string.split(",")))
+    raise ShellsyNtaxError(f"Unrecognised literal: {string!r}")
 
 
 class Arguments:

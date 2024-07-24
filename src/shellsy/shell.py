@@ -30,7 +30,6 @@ class Command:
         obj.commands[name] = self
 
 
-@annotate
 class Shell(Command):
     history = os.path.realpath(
         os.path.join(os.path.dirname(__file__), "history.txt")
@@ -276,7 +275,7 @@ class Shell(Command):
         return "rptompt"
 
     @annotate
-    def __call__(self, args: str | Iterable[str]):
+    def __call__(self, args: str | Iterable[str] = ""):
         if isinstance(args, str):
             args = CommandCall.from_string(args)
         else:

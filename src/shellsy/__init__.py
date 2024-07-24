@@ -17,3 +17,6 @@ class Shellsy(Shell):
             os.chdir(path)
         else:
             print(os.getcwd())
+
+
+__version__ = "1.0.0"
