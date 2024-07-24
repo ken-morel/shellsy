@@ -1,31 +1,31 @@
 import comberload
 
-from .args import Parameters
-from .args import group
+from .args import Arguments
+from .args import CommandCall
+from .args import CommandParameters
 from pathlib import Path
 from pyoload import *
 from typing import Callable
 from typing import Iterable
 
 
+class NoSuchCommand(ValueError):
+    def show(self):
+        print("No Such command")
+
+
 class Command:
-    params: Parameters
+    params: CommandParameters
 
-    # @annotate
-    def __init__(self, *params):
-        self.params = Parameters(*params)
-
-    @annotate
-    def __call__(self, func: Callable):
+    def __init__(self, func: Callable):
+        self.params = CommandParameters.from_function(func)
         self.__func__ = func
-        return self
 
     @annotate
-    def entrypoint(self, args: Iterable[str]):
-        if isinstance(args, str):
-            args = group(args)
-        args = self.paramaters(args)
-        self.__func__(args)
+    def __call__(self, args: Iterable[str]):
+        args = Arguments.from_string_parts(args)
+        args = self.params.bind(args)
+        self.__func__(**args)
 
     def __set_name__(self, obj, name: str, typo=None):
         if not hasattr(obj, "commands"):
@@ -38,29 +38,116 @@ class Command:
 class Shell(Command):
     history = Path("./history.txt")
     prompt_session = None
+    _lexer = None
+    _bindings = None
 
     def __init_subclass__(cls):
         cls.name = cls.__name__.lower()
 
-    @comberload("prompt_toolkit")
+    def __init__(self):
+        if not hasattr(self, "subshells"):
+            self.subshells = {}
+        if not hasattr(self, "commands"):
+            self.commands = {}
+
+    @comberload(
+        [
+            "prompt_toolkit.key_binding",
+            "prompt_toolkit.application",
+        ]
+    )
+    def key_bindings(self):
+        if self._bindings is not None:
+            return self._bindings
+
+        from prompt_toolkit.key_binding import KeyBindings
+        from prompt_toolkit.application import run_in_terminal
+
+        bindings = KeyBindings()
+
+        @bindings.add("c-t")
+        def _(event):
+            "Say 'hello' when `c-t` is pressed."
+
+            def print_hello():
+                print("hello world")
+
+            run_in_terminal(print_hello)
+
+        @bindings.add("c-c")
+        def _(event):
+            "Exit when `c-x` is pressed."
+            print("exiting gracefully")
+            event.app.exit()
+
+        @bindings.add("c-space")
+        def _(event):
+            "Initialize autocompletion, or select the next completion."
+            buff = event.app.current_buffer
+            if buff.complete_state:
+                buff.complete_next()
+            else:
+                buff.start_completion(select_first=False)
+
+        self._bindings = bindings
+        return bindings
+
+    @comberload("prompt_toolkit.completion")
+    def nested_completer(self):
+        from prompt_toolkit.completion import NestedCompleter
+
+        completions = {
+            "show": {
+                "version": None,
+                "clock": None,
+                "ip": {"interface": {"brief"}},
+            },
+            "exit": None,
+        }
+        return NestedCompleter.from_nested_dict(completions)
+
+    @comberload(
+        [
+            "prompt_toolkit",
+            "prompt_toolkit.styles",
+            "prompt_toolkit.history",
+        ]
+    )
     def get_input(self):
         import prompt_toolkit
+        from prompt_toolkit.styles import Style
+        from prompt_toolkit.history import FileHistory
+        from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
-        if self.prompt_session is None:
-            self.prompt_session = prompt_toolkit.PromptSession(
-                validate_while_typing=True,
-                bottom_toolbar=self.bottom_toolbar,
-                rprompt=self.right_prompt,
-                enable_history_search=True,
-                history=self.history,
-                lexer=self.lexer(),
-                message=self.name + "\n> ",
-            )
-        return self.prompt_session.prompt()
+        return prompt_toolkit.prompt(
+            validate_while_typing=True,
+            bottom_toolbar=self.bottom_toolbar,
+            rprompt=self.right_prompt,
+            enable_history_search=True,
+            history=FileHistory(self.history),
+            lexer=self.lexer(),
+            message=[
+                ("class:shellname", self.name),
+                ("", "\n"),
+                ("class:prompt", "> "),
+            ],
+            style=Style.from_dict(
+                {
+                    "": "#ffffff",
+                    "shellname": "#884444",
+                    "prompt": "#00aa00",
+                    "host": "#00ffff bg:#444400",
+                    "path": "ansicyan underline",
+                }
+            ),
+            completer=self.nested_completer(),
+            auto_suggest=AutoSuggestFromHistory(),
+            mouse_support=True,
+            key_bindings=self.key_bindings(),
+        )
 
     @get_input.fallback
     def raw_get_input(self):
-        print("main")
         return input(self.name + "> ")
 
     @comberload(["pygments.lexer", "pygments.token"])
@@ -68,7 +155,7 @@ class Shell(Command):
         if self._lexer:
             return self._lexer
         import re
-
+        from prompt_toolkit.lexers import PygmentsLexer
         from pygments.lexer import (
             # Lexer,
             RegexLexer,
@@ -90,8 +177,8 @@ class Shell(Command):
             Keyword,
             Name,
             String,
-            # Number,
-            # Generic,
+            Number,
+            Generic,
         )
 
         class CustomLexer(RegexLexer):
@@ -114,71 +201,33 @@ class Shell(Command):
 
             tokens = {
                 "root": [
-                    (r"\(", Punctuation, "child"),
-                    (r"\s+", Text),
-                    (
-                        r"^(\s*#[#\s]*)(\.(?:{}))([^\n]*$)".format(
-                            "|".join(commenthelp)
-                        ),
-                        bygroups(Comment, String.Doc, Comment),
-                    ),
-                    (r"#[^\n]*?$", Comment),
-                    (r"(&lt;|<)#", Comment.Multiline, "multline"),
-                    # escaped syntax
-                    (r'`[\'"$@-]', Punctuation),
-                    (r'"', String.Double, "string"),
-                    (r"'([^']|'')*'", String.Single),
-                    (
-                        r"(\$|@@|@)((global|script|private|env):)?\w+",
-                        Name.Variable,
-                    ),
-                    (r"({})\b".format("|".join(keywords)), Keyword),
-                    (r"-({})\b".format("|".join(operators)), Operator),
-                    (
-                        r"({})-[a-z_]\w*\b".format("|".join(verbs)),
-                        Name.Builtin,
-                    ),
-                    (r"({})\s".format("|".join(aliases_)), Name.Builtin),
-                    (
-                        r"\[[a-z_\[][\w. `,\[\]]*\]",
-                        Name.Constant,
-                    ),  # .net [type]s
-                    (r"-[a-z_]\w*", Name),
-                    (r"\w+", Name),
-                    (r"[.,;:@{}\[\]$()=+*/\\&%!~?^`|<>-]", Punctuation),
-                ],
-                "child": [
-                    (r"\)", Punctuation, "#pop"),
-                    include("root"),
-                ],
-                "multline": [
-                    (r"[^#&.]+", Comment.Multiline),
-                    (r"#(>|&gt;)", Comment.Multiline, "#pop"),
-                    (r"\.({})".format("|".join(commenthelp)), String.Doc),
-                    (r"[#&.]", Comment.Multiline),
-                ],
-                "string": [
-                    (r"`[0abfnrtv'\"$`]", String.Escape),
-                    (r'[^$`"]+', String.Double),
-                    (r"\$\(", Punctuation, "child"),
-                    (r'""', String.Double),
-                    (r"[`$]", String.Double),
-                    (r'"', String.Double, "#pop"),
-                ],
-                "heredoc-double": [
-                    (r'\n"@', String.Heredoc, "#pop"),
-                    (r"\$\(", Punctuation, "child"),
-                    (r'[^@\n]+"]', String.Heredoc),
-                    (r".", String.Heredoc),
+                    *[
+                        (
+                            "^(" + command.replace(".", "\\.") + "\\b)",
+                            Name.Function,
+                        )
+                        for command in self.get_possible_subcommands()
+                    ],
+                    # Double quoted strings (e.g., "arg1 string")
+                    (r'"[^"]*"', String.Double),
+                    # Single quoted strings (e.g., 'arg1 string')
+                    (r"'[^']*'", String.Single),
+                    # Numbers (e.g., 123)
+                    (r"\d+", Number),
+                    (r"\d+x\d+", Generic),
                 ],
             }
 
-        self._lexer = CustomLexer()
+        self._lexer = PygmentsLexer(CustomLexer)
         return self._lexer
 
-    @lexer.fallback
-    def _(self):
-        return None
+    def get_possible_subcommands(self):
+        possible = list(self.commands)
+        for sub, val in self.subshells.items():
+            possible.extend(
+                [sub + "." + x for x in val.get_possible_subcommands()]
+            )
+        return possible
 
     def bottom_toolbar(self):
         return "bottom_toolbar"
@@ -186,24 +235,40 @@ class Shell(Command):
     def right_prompt(self):
         return "rptompt"
 
-    def entrypoint(self, args: str | Iterable[str]):
+    @annotate
+    def __call__(self, args: str | Iterable[str]):
         if isinstance(args, str):
-            args = group(args)
-        if len(args) > 0:
-            name, *args = args
-            self.sub_call(name, args)
+            args = CommandCall.from_string(args)
+        else:
+            args = CommandCall.from_string_parts(args)
+        if args.command:
+            self.call(args)
         else:
             self.cmdloop()
 
-    def sub_call(self, name: str, args: Iterable[str]):
+    def call(self, call: CommandCall):
+        name, inner = call.inner()
         if name in self.commands:
-            return self.commands[name].entrypoint(args)
+            return self.commands[name](inner.arguments)
+        elif name in self.subshells:
+            return self.subshells[name].call(inner)
         else:
-            raise ValueError("no such subcommand", name)
+            raise NoSuchCommand("no such subcommand", name)
 
     def cmdloop(self):
         self.should_run = True
         while self.should_run:
-            text = self.get_input()
-            print(text)
-            self.entrypoint(text)
+            try:
+                text = self.get_input()
+                call = CommandCall.from_string(text)
+                self.call(call)
+            except NoSuchCommand as e:
+                e.show()
+            # except Exception as e:
+            #     print(e)
+
+    def __set_name__(self, obj, name: str, typo=None):
+        if not hasattr(obj, "subshells"):
+            obj.subshells = {}
+        self.name = name
+        obj.subshells[name] = self

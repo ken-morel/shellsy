@@ -12,14 +12,14 @@ class ComberloadModule(ModuleType):
     backlog = []
     done = []
     comberloaders = []
+    _callbacks: list[Callable] = []
 
     class ComberLoader:
         _fallback = None
 
-        def __init__(self, modules, func, default):
+        def __init__(self, modules, func):
             self.__func__ = func
             self.modules = modules
-            self.default = default
             ComberloadModule.comberloaders.append(self)
             self.comberloaded = (
                 len(set(ComberloadModule.backlog) & set(modules)) == 0
@@ -28,7 +28,7 @@ class ComberloadModule(ModuleType):
 
         def call(self, *args, **kw):
             if self._fallback is None:
-                raise RuntimeError(f"fallback not set on {self.__func__}")
+                return None
             return self._fallback(*args, **kw)
 
         def fallback(self, func: Callable):
@@ -51,7 +51,7 @@ class ComberloadModule(ModuleType):
     def __str__(self):
         return "<Comberload module>"
 
-    def __call__(self, modules: list[str], default=None):
+    def __call__(self, modules: list[str]):
         """
         THis registers modules for comberloading
         :param modules: The list of modules to load
@@ -60,11 +60,17 @@ class ComberloadModule(ModuleType):
         """
         if isinstance(modules, str):
             modules = [modules]
-        self.backlog.extend(modules)
+        self.backlog.extend([mod for mod in modules if mod not in self.backlog])
         self.start_worker()
 
         def register_func(func: Callable):
-            return ComberloadModule.ComberLoader(modules, func, default)
+            return ComberloadModule.ComberLoader(modules, func)
+
+        def register_callback(func: Callable):
+            ComberloadModule._callbacks.append((modules, func))
+            return func
+
+        register_func.callback = register_callback
 
         return register_func
 
@@ -84,7 +90,8 @@ class ComberloadModule(ModuleType):
 
     def _worker(self):
         self.worker_running = True
-        for modules in self.backlog:
+        while len(self.backlog) > 0:
+            modules = self.backlog.pop()
             self.importing = True
             modules = modules.split(".")
             for depth in range(len(modules)):
@@ -106,6 +113,12 @@ class ComberloadModule(ModuleType):
                     ):
                         loader.comberloaded = True
                         loader.call = loader.__func__
+                for idx, (mods, func) in reversed(tuple(enumerate(
+                    ComberloadModule._callbacks[::]
+                ))):
+                    if len(set(ComberloadModule.backlog) & set(mods)) == 0:
+                        ComberloadModule._callbacks.pop(idx)
+                        func()
             self.importing = False
         self.worker_running = False
 
