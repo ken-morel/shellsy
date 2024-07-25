@@ -1,3 +1,30 @@
+Metadata-Version: 2.1
+Name: shellsy
+Version: 1.0.0
+Summary: Python package for function intergrating you command line utilities
+Home-page: https://github.com/ken-morel/shellsy
+Author: ken-morel
+Author-email: engonken8@gmail.com
+Maintainer: ken-morel
+Maintainer-email: engonken8@gmail.com
+License: MIT
+Project-URL: Funding, https://ko-fi.com/kenmorel
+Project-URL: Source, https://github.com/ken-morel/shellsy/
+Project-URL: Tracker, https://github.com/ken-morel/shellsy/issues
+Classifier: Intended Audience :: Developers
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Natural Language :: English
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Provides-Extra: ci
+
 Good day pythonista!
 
 I am here to present to you: shellsy, what is :question:

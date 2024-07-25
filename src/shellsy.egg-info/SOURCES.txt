@@ -1,0 +1,14 @@
+setup.py
+shellsy/__init__.py
+shellsy/__main__.py
+shellsy/args.py
+shellsy/settings.py
+shellsy/shell.py
+shellsy/shellsy.py
+shellsy.egg-info/PKG-INFO
+shellsy.egg-info/SOURCES.txt
+shellsy.egg-info/dependency_links.txt
+shellsy.egg-info/entry_points.txt
+shellsy.egg-info/requires.txt
+shellsy.egg-info/top_level.txt
+tests/__init__.py
