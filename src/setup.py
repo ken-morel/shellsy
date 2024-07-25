@@ -1,23 +1,19 @@
-from pathlib import Path
 
-import os
+from pathlib import Path
 
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
-
-from shellsy import __version__
+from shellsy import __version__ as version
 
 project_dir = Path(__file__).parent
 
 
 class ShellsyInstallCommand(install):
     def run(self):
-        from appdirs import user_data_dir
-
-        data_dir = user_data_dir("shellsy", "ken-morel")
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+        import shellsy.settings
+        shellsy.settings.init()
+        super().run()
 
 
 try:
@@ -49,7 +45,7 @@ extra_ci = (
 
 setup(
     name="shellsy",
-    version=__version__,
+    version=version,
     packages=find_packages(exclude=["tests", "tests.*"]),
     project_urls={
         "Funding": "https://ko-fi.com/kenmorel",

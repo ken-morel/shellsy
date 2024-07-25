@@ -1,0 +1,12 @@
+pyoload
+prompt_toolkit
+comberload
+
+[ci]
+pytest
+pytest-cov
+coveralls
+
+[dev]
+pytest
+pytest-cov

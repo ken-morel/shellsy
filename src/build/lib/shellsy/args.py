@@ -316,11 +316,10 @@ class Arguments:
                         stack.pop()
                     pos += 1
                 string_parts.append(string[begin : pos + 1])
-            elif not string[pos].isspace():
-                begin = pos
-                while len(string) > pos and not string[pos].isspace():
-                    pos += 1
-                string_parts.append(string[begin:pos])
+            elif string[pos].isspace():
+                string_parts.append("")
+            else:
+                string_parts[-1] += string[pos]
             pos += 1
         del pos
         return cls.from_string_parts(tuple(filter(bool, string_parts)))
