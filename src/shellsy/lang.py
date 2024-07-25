@@ -1,13 +1,7 @@
 from decimal import Decimal
-from inspect import _empty
-from inspect import ismethod
-from inspect import signature
 from pathlib import Path
 from pyoload import *
-from typing import Any
-from typing import Callable
 from typing import Iterable
-from . import lexer
 
 
 class Context(dict):
@@ -26,10 +20,98 @@ class ShellsyCustomType:
     pass
 
 
+class NilType(ShellsyCustomType):
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(NilType, cls).__new__(cls)
+        return cls._instance
+
+    def __repr__(self):
+        return "<shellsy.Nil>"
+
+    def __reduce__(self):
+        return (NilType, ())
+
+    def __bool__(self):
+        return False
+
+
+class _WordsMeta(type):
+    """Metaclass for creating Keyword subclasses dynamically."""
+
+    def __getitem__(cls, items):
+        from typing import Union
+
+        if not isinstance(items, tuple):
+            items = (items,)
+        return Union[tuple(map(Word.words.get, items))]
+
+
+class Word(ShellsyCustomType, metaclass=_WordsMeta):
+    class DoesNotExist(ShellsyNtaxError, ValueError):
+        pass
+
+    words = {}
+
+    def __reduce__(self):
+        return self._name
+
+    def __new__(cls, name, *args, **kwargs):
+        if name in cls.words:
+            return cls.words[name]()
+            # return super(Word, cls).__new__(cls.keywords[name])
+        else:
+            raise Word.DoesNotExist(name)
+
+    @classmethod
+    def add(cls, name):
+        setattr(
+            Word,
+            name,
+            new_class := type(
+                "Word." + name,
+                (Word._Word, cls),
+                {
+                    "name": name,
+                },
+            ),
+        )
+        cls.words[name] = new_class
+        return super(Word, cls).__new__(new_class)
+
+    def __instancecheck__(self, obj):
+        if isinstance(obj, str):
+            obj = Word(obj)
+        if object.__instancecheck__(obj):
+            return obj.name == self.name
+        return False
+
+    def __repr__(self):
+        return f":{self.name}:"
+
+    def __hash__(self):
+        return hash(self.name)
+
+    class _Word:
+        _instance = None
+
+        def __new__(cls):
+            if cls._instance is None:
+                cls._instance = object.__new__(cls)
+            return cls._instance
+
+
+Word.add("as")
+Word.add("else")
+
+
 class CommandBlock(ShellsyCustomType):
     commands: Iterable[str]
 
     def __init__(self, commands: Iterable[str]):
+        from .args import CommandCall
         self.commands = list(map(CommandCall.from_string, commands))
 
     def evaluate(self, shell):
@@ -101,13 +183,16 @@ class Expression(ShellsyCustomType):
         def evaluate(self):
             raise NotImplementedError("should be overriden in subclasses")
 
+
 class PythonEvaluator(Expression.Evaluator):
     prefix = "py"
 
     def evaluate(self):
         import traceback
+        import __main__
+
         try:
-            return eval(self.string, self.context)
+            return eval(self.string, self.context, vars(__main__))
         except Exception as e:
             from shellsy.shell import console
 
@@ -130,43 +215,6 @@ class Point(tuple, ShellsyCustomType):
 
     def __repr__(self):
         return f"Point{tuple.__repr__(self)}"
-
-
-class ShellsyWord:
-    class DoesNotExist(ShellsyNtaxError, ValueError):
-        pass
-
-    words = ["else", "as"]
-
-    def __init__(self, name):
-        if name not in ShellsyWord.words:
-            raise ShellsyWord.DoesNotExist(name)
-        self.name = name
-
-    @classmethod
-    def add(cls, name):
-        ShellsyWord.words.append(name)
-
-    def __repr__(self):
-        return f":{self.name}:"
-
-
-class NilType:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(NilType, cls).__new__(cls)
-        return cls._instance
-
-    def __repr__(self):
-        return "<shellsy.Nil>"
-
-    def __reduce__(self):
-        return (NilType, ())
-
-    def __bool__(self):
-        return False
 
 
 Nil = NilType()
@@ -235,8 +283,10 @@ def evaluate_literal(string: str) -> Literal:
         return False
     elif string == "Nil":
         return Nil
-    elif string in ShellsyWord.words:
-        return ShellsyWord(string)
+    elif string == "None":
+        return None
+    elif string in Word.words:
+        return Word(string)
     elif string[0] == "$":
         return Variable(string[1:])
     elif len(string_set - digits) == 0:

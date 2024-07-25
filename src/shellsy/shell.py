@@ -1,3 +1,5 @@
+from . import lexer
+
 import comberload
 import os
 from .args import *
@@ -5,7 +7,6 @@ from pyoload import *
 from typing import Callable
 from typing import Iterable
 from .settings import *
-from inspect import _empty
 from rich.console import Console
 
 console = Console()
@@ -109,7 +110,6 @@ class Shell(Command):
 
     def format_cwd(self):
         import os
-        from os import path
 
         cwd = os.getcwd()
         shortens = ("", "")
@@ -123,7 +123,7 @@ class Shell(Command):
         if shortens[0]:
             return [
                 ("class:envpath", "%" + shortens[0] + "%"),
-                ("class:cwdpath", cwd[len(shortens[1]) :]),
+                ("class:cwdpath", cwd[len(shortens[1]):]),
             ]
         else:
             drive, path = os.path.splitdrive(cwd)
@@ -199,7 +199,6 @@ class Shell(Command):
     def shell_completer(self):
         # TDOD: move this to another file and use cls(shell)
         from prompt_toolkit.completion import Completer, Completion
-        import string
 
         def similarity(a, b):
             import difflib
@@ -225,12 +224,12 @@ class Shell(Command):
                     else:
                         word = line
                     comps = []
-                    for sword in ShellsyWord.words + [
+                    for sword in tuple(Word.words.keys()) + (
                         "None",
                         "Nil",
                         "True",
                         "False",
-                    ]:
+                    ):
                         comps.append(
                             (similarity(line, sword[: len(line)]), sword)
                         )

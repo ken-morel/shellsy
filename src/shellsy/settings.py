@@ -32,22 +32,26 @@ class SettingsFile(dict):
             f.write(json.dumps(self, indent=2))
 
 
-settings = None
+_settings = None
 
 
 def init():
-    global settings
+    global _settings
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    if not settings:
-        settings = SettingsFile(os.path.join(data_dir, "settings.json"), {})
+    if not _settings:
+        _settings = SettingsFile(os.path.join(data_dir, "settings.json"), {})
 
 
 def get_setting(name, default=None):
-    settings.load()
-    return settings.get(name, default)
+    _settings.load()
+    return _settings.get(name, default)
 
 
 def set_setting(name, val):
-    settings[name] = val
-    settings.save()
+    _settings[name] = val
+    _settings.save()
+
+
+def settings():
+    return _settings

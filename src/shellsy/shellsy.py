@@ -49,6 +49,7 @@ class Shellsy(Shell):
         shell,
         condition: Expression,
         then: CommandBlock,
+        __: Word["else"] = None,
         else_: CommandBlock = None,
     ):
         if condition():
@@ -60,10 +61,10 @@ class Shellsy(Shell):
 
     class Config(Shell):
         @Command
-        def set(shell, name: str, val):
-            settings[name] = val
-            return settings.get(name)
+        def set(shell, name: str, val: Any):
+            set_setting(name, val)
+            return get_setting(name)
 
         @Command
         def get(shell, name: str):
-            return settings.get(name)
+            return get_setting(name)
