@@ -101,7 +101,7 @@ class Expression(ShellsyCustomType):
         def evaluate(self):
             raise NotImplementedError("should be overriden in subclasses")
 
-class PythonEvaluator(Evaluator):
+class PythonEvaluator(Expression.Evaluator):
     prefix = "py"
 
     def evaluate(self):
