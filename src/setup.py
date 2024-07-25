@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from setuptools import find_packages
@@ -12,6 +11,7 @@ project_dir = Path(__file__).parent
 class ShellsyInstallCommand(install):
     def run(self):
         import shellsy.settings
+
         shellsy.settings.init()
         super().run()
 

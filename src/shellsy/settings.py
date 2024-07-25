@@ -40,8 +40,7 @@ def init():
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     if not settings:
-        settings = SettingsFile(os.path.join(data_dir, "settings.json"), {
-        })
+        settings = SettingsFile(os.path.join(data_dir, "settings.json"), {})
 
 
 def get_setting(name, default=None):

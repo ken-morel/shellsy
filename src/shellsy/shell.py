@@ -6,7 +6,10 @@ from typing import Callable
 from typing import Iterable
 from .settings import *
 from inspect import _empty
-from rich import print
+from rich.console import Console
+
+console = Console()
+pprint = console.print
 
 
 class NoSuchCommand(ValueError):
@@ -32,6 +35,7 @@ class Shell(Command):
     prompt_session = None
     _lexer = None
     _bindings = None
+    console: Console = console
 
     def __init_subclass__(cls):
         cls.name = cls.__name__.lower()
@@ -84,8 +88,10 @@ class Shell(Command):
         @bindings.add("c-c")
         def _(event):
             "Exit when `c-x` is pressed."
+
             def print_hello():
                 print("exiting gracefully!")
+
             run_in_terminal(print_hello)
             event.app.exit()
 
@@ -100,13 +106,6 @@ class Shell(Command):
 
         self._bindings = bindings
         return bindings
-
-    @comberload("prompt_toolkit.completion")
-    def nested_completer(self):
-        from prompt_toolkit.completion import NestedCompleter
-
-        completions = {x: None for x in self.get_possible_subcommands()}
-        return NestedCompleter.from_nested_dict(completions)
 
     def format_cwd(self):
         import os
@@ -135,7 +134,9 @@ class Shell(Command):
         from prompt_toolkit.styles import style_from_pygments_cls, merge_styles
         from pygments.styles import get_style_by_name
 
-        base_style = style_from_pygments_cls(get_style_by_name(get_setting("stylename", "monokai")))
+        base_style = style_from_pygments_cls(
+            get_style_by_name(get_setting("stylename", "monokai"))
+        )
         custom_style = Style.from_dict(
             {
                 # "": "#ffffff",
@@ -160,6 +161,7 @@ class Shell(Command):
         import prompt_toolkit
         from prompt_toolkit.history import FileHistory
         from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+
         cwd = self.format_cwd()
         return prompt_toolkit.prompt(
             validate_while_typing=True,
@@ -176,7 +178,7 @@ class Shell(Command):
                 ("class:prompt", "> "),
             ],
             style=self.get_styles(),
-            completer=self.nested_completer(),
+            completer=self.shell_completer(),
             auto_suggest=AutoSuggestFromHistory(),
             mouse_support=True,
             key_bindings=self.key_bindings(),
@@ -190,227 +192,53 @@ class Shell(Command):
     def lexer(self):
         if self._lexer:
             return self._lexer
-        import re
-        from prompt_toolkit.lexers import PygmentsLexer
-        from pygments.lexer import (
-            # Lexer,
-            RegexLexer,
-            # do_insertions,
-            include,
-            # default,
-            # this,
-            # using,
-            # words,
-            # line_re,
-            bygroups,
-        )
-        from pygments.token import (
-            Punctuation,
-            # Whitespace,
-            Text,
-            Comment,
-            Operator,
-            Keyword,
-            Name,
-            String,
-            Number,
-            Generic,
-            Error,
-            Literal,
-        )
-        class CustomLexer(RegexLexer):
-            name = self.name
-            aliases = [""]
-            filenames = ["*.shellsy"]
-            mimetypes = ["text/x-shellsy"]
-            url = "https://github.com/ken-morel/shellsy"
-            version_added = "0.0.1"
-            flags = re.DOTALL | re.IGNORECASE | re.MULTILINE
-            keywords = self.commands.keys()
 
-            operators = []
-
-            verbs = [""]
-
-            aliases_ = []
-
-            commenthelp = ["help"]
-
-            commands = [
-                *[
-                    (
-                        r"(" + command.replace(".", "\\.") + "\\b)",
-                        Name.Function,
-                    )
-                    for command in self.get_possible_subcommands()
-                ],
-                *[(f"\\b{c}\\b", Keyword) for c in ShellsyWord.words],
-                (
-                    r"^(\$)([\w_]+)\s*(\:)",
-                    bygroups(Punctuation, Name.Variable, Keyword),
-                ),
-                (r"^([\w._]+)", Error),
-                (r"True|False|Nil", Keyword),
-                (
-                    r"(\()(\w+)#(.*)(\))",
-                    bygroups(
-                        Punctuation, Keyword, String.Single, Punctuation
-                    ),
-                ),
-                (
-                    r"\(",
-                    Punctuation, "python-expression",
-                ),
-                (
-                    r"(?<!^)(\$)([\w_]+)",
-                    bygroups(Punctuation, Name.Variable),
-                ),
-                # Double quoted strings (e.g., "arg1 string")
-                (
-                    r"(')([^']*)(')",
-                    bygroups(Punctuation, String.Single, Punctuation),
-                ),
-                (
-                    r'(")([^"]*)(")',
-                    bygroups(Punctuation, String.Double, Punctuation),
-                ),
-                (
-                    r"(-?[\d.]+)(\:)(-?[\d.]+)(\:)(-?[\d.]+)",
-                    bygroups(
-                        Literal.Number,
-                        Punctuation,
-                        Literal.Number,
-                        Punctuation,
-                        Literal.Number,
-                    ),
-                ),
-                (
-                    r"(-?[\d.]+)(\:)(-?[\d.]+)",
-                    bygroups(Literal.Number, Punctuation, Literal.Number),
-                ),
-                (r"-?[\d.]+(?:,-?[\d.]+)+", Literal.Number),
-                (r"-?\d+", Number),
-                (r"-?[\d.]+", Literal.Number.Float),
-                (r"(-)(\w+)", bygroups(Punctuation, Name.Label)),
-                (r"/", Punctuation, "pathcontent"),
-                (r"(?<!\s)\s(?!\s)", Generic),
-            ]
-
-            tokens = {
-                "root": [
-                    (r'^\s*#.+', Comment.Single),
-                    (r"\{", Punctuation, "commandblock"),
-                    *commands,
-                ],
-                "pathcontent": [
-                    (r"\w\:", Name.Namespace),
-                    (r"/(?=\w|\d|_|\-)", Operator),
-                    (r"[\w\d_\-\s]+", Generic),
-                    (r"\.[\w_\-]+(?=/)", Name.Namespace),
-                    (r"/(?=\s|\b|$)", Punctuation, "#pop"),
-                ],
-                "commandblock": [
-                    (r"\}", Punctuation, "#pop"),
-                    (r";", Punctuation),
-                    *commands,
-                ],
-                'python-expression': [
-                    # (r'[^\(]+', Punctuation),
-                    (r'\)', Punctuation, '#pop'),  # End of inline Python
-                    include('python'),  # Include Python lexer rules
-                ],
-                'python': [
-                    (r'\s+', Text),
-                    (r'\\\n', Text),
-                    (r'\\', Text),
-                    (r'(print|exec|assert|lambda)\b', Keyword),
-                    (r'(if|else|elif|while|for|try|except|finally|with|as|'
-                     r'pass|break|continue|return|yield|raise|del|global|'
-                     r'nonlocal|assert|True|False|None|and|or|not|is|in)\b', Keyword),
-                    (r'(self|cls)\b', Name.Builtin.Pseudo),
-                    (r'(Ellipsis|NotImplemented)\b', Name.Builtin.Pseudo),
-                    (r'(abs|divmod|input|open|staticmethod|all|enumerate|int|ord|str|'
-                     r'any|eval|isinstance|pow|sum|ascii|exec|issubclass|print|super|'
-                     r'bin|filter|iter|property|tuple|bool|float|len|range|type|'
-                     r'bytearray|format|list|repr|vars|bytes|frozenset|locals|'
-                     r'reversed|zip|callable|getattr|map|round|__import__|chr|globals|'
-                     r'max|set|complex|hasattr|memoryview|slice|delattr|hash|min|'
-                     r'sorted|dict|help|next|staticmethod|dir|hex|object|str|'
-                     r'enumerate|id|oct|sum|exec|input|open|property|type|print|'
-                     r'staticmethod|sorted|super|vars|all|any|bin|bool|bytearray|'
-                     r'bytes|callable|chr|classmethod|compile|complex|delattr|dict|'
-                     r'dir|divmod|enumerate|eval|filter|float|format|frozenset|getattr|'
-                     r'globals|hasattr|hash|help|hex|id|input|int|isinstance|'
-                     r'issubclass|iter|len|list|locals|map|max|memoryview|min|next|'
-                     r'object|oct|open|ord|pow|property|range|repr|reversed|round|'
-                     r'set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|'
-                     r'vars|zip|__import__)\b', Name.Builtin),
-                    (r'(True|False|None)\b', Name.Builtin.Pseudo),
-                    (r'(int|long|float|complex)\b', Name.Builtin),
-                    (r'(set|list|dict|tuple|frozenset)\b', Name.Builtin),
-                    (r'(object|type)\b', Name.Builtin),
-                    (r'(BaseException|Exception|ArithmeticError|BufferError|'
-                     r'LookupError|AssertionError|AttributeError|EOFError|'
-                     r'FloatingPointError|GeneratorExit|ImportError|ModuleNotFoundError|'
-                     r'IndexError|KeyError|KeyboardInterrupt|MemoryError|NameError|'
-                     r'NotImplementedError|OSError|OverflowError|RecursionError|'
-                     r'ReferenceError|RuntimeError|StopIteration|StopAsyncIteration|'
-                     r'SyntaxError|IndentationError|TabError|SystemError|SystemExit|'
-                     r'TypeError|UnboundLocalError|UnicodeError|UnicodeEncodeError|'
-                     r'UnicodeDecodeError|UnicodeTranslateError|ValueError|'
-                     r'ZeroDivisionError)\b', Name.Builtin.Exception),
-                    (r'(abs|all|any|ascii|bin|bool|bytearray|bytes|callable|chr|'
-                     r'classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|'
-                     r'eval|exec|filter|float|format|frozenset|getattr|globals|'
-                     r'hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|'
-                     r'len|list|locals|map|max|memoryview|min|next|object|oct|open|'
-                     r'ord|pow|print|property|range|repr|reversed|round|set|setattr|'
-                     r'slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|'
-                     r'__import__)\b', Name.Builtin),
-                    (r'@\w+', Name.Decorator),
-                    (r'@[A-Za-z_]\w*', Name.Decorator),
-                    (r'(None|True|False|Ellipsis|NotImplemented)\b', Name.Builtin.Pseudo),
-                    (r'(\d+\.\d*|\.\d+|\d+\.|\d+)([eE][+-]?\d+)?j?\b', Number.Float),
-                    (r'0x[0-9a-fA-F]+', Number.Hex),
-                    (r'0b[01]+', Number.Bin),
-                    (r'0o[0-7]+', Number.Oct),
-                    (r'\d+j?\b', Number.Integer),
-                    (r'"(\\\\|\\"|[^"])*"', String.Double),
-                    (r"'(\\\\|\\'|[^'])*'", String.Single),
-                    (r'\\\n', String),
-                    (r'\\', String),
-                    (r'`.*?`', String.Backtick),
-                    (r'\r\n|\n', Text),
-                    (r'\r', Text),
-                    (r'[\[\]{}:(),;]', Punctuation),
-                    (r'==|!=|<=|>=|<<|>>|->|\+=|-=|\*=|/=|//=|%=|&=|\|=|^=|>>=|<<=|@=|\*\*|//|->|<<|>>|<>|!=|<=|>=|==|->|:|'
-                     r'\+|-|\*|/|%|&|\||\^|~|<|>', Operator),
-                    (r'(not|and|or)\b', Operator.Word),
-                    (r'\.', Operator),
-                    (r'=', Operator),
-                    (r'\+\+|--|\*\*|//|\|\|', Operator),
-                    (r'[*<>!&^~@|\-+=/%]', Operator),
-                    (r'[()\[\]{}:.,;@]', Punctuation),
-                    (r'\b(print|exec|assert|lambda|yield|return|import|from|class|def|'
-                     r'elif|else|try|except|finally|raise|while|for|in|and|or|not|is|'
-                     r'with|as|pass|break|continue|del|global|nonlocal|if|True|False|'
-                     r'None)\b', Keyword),
-                    (r'@[A-Za-z_]\w*', Name.Decorator),
-                    (r'__\w+__', Name.Function.Magic),
-                    (r'__\w+__', Name.Variable.Magic),
-                    (r'__\w+__', Name.Class.Magic),
-                    (r'__\w+__', Name.Constant.Magic),
-                    (r'__[a-zA-Z_]\w*__', Name.Builtin.Pseudo),
-                    (r'__[a-zA-Z_]\w*__', Name.Function.Magic),
-                    (r'__[a-zA-Z_]\w*__', Name.Variable.Magic),
-                    (r'__[a-zA-Z_]\w*__', Name.Class.Magic),
-                    (r'__[a-zA-Z_]\w*__', Name.Constant.Magic),
-                    (r'[a-zA-Z_]\w*', Name),
-                ]
-            }
-
-        self._lexer = PygmentsLexer(CustomLexer)
+        self._lexer = lexer.for_shell(self)
         return self._lexer
+
+    def shell_completer(self):
+        # TDOD: move this to another file and use cls(shell)
+        from prompt_toolkit.completion import Completer, Completion
+        import string
+
+        def similarity(a, b):
+            import difflib
+
+            return difflib.SequenceMatcher(lambda *_: False, a, b).ratio()
+
+        class ShellCompleter(Completer):
+            def get_completions(_self, document, complete_event):
+                # self.get_possible_subcommands()
+                line = document.current_line_before_cursor
+                # yield Completion(line, start_position=0)
+                if " " not in line:
+                    comps = []
+                    for cmd in self.get_possible_subcommands():
+                        comps.append((similarity(line, cmd[: len(line)]), cmd))
+                    comps.sort(key=lambda c: -c[0] * 100)
+                    for _, comp in comps:
+                        yield Completion(comp, start_position=-len(line))
+                elif not line.endswith(" "):
+                    _, line = line.split(" ", 1)
+                    if " " in line and not line.endswith(" "):
+                        _, word = line.rsplit(" ", 1)
+                    else:
+                        word = line
+                    comps = []
+                    for sword in ShellsyWord.words + [
+                        "None",
+                        "Nil",
+                        "True",
+                        "False",
+                    ]:
+                        comps.append(
+                            (similarity(line, sword[: len(line)]), sword)
+                        )
+                    comps.sort(key=lambda c: -c[0] * 100)
+                    for _, comp in comps:
+                        yield Completion(comp, start_position=-len(word))
+
+        return ShellCompleter()
 
     def get_possible_subcommands(self):
         possible = list(self.commands)
@@ -464,7 +292,7 @@ class Shell(Command):
                 else:
                     call = CommandCall.from_string(text)
                     ret = self.call(call)
-                    print(ret)
+                    pprint(ret)
             except (
                 NoSuchCommand,
                 ArgumentTypeMismatch,
@@ -472,4 +300,8 @@ class Shell(Command):
             ) as e:
                 e.show()
             # except Exception as e:
-            #     print(e)
+            #     console.print_exception(show_locals=True)
+            #     if input("continue? (y/n)> ").lower().startswith("y"):
+            #         continue
+            #     else:
+            #         break
