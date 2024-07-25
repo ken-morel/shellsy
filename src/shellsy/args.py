@@ -9,6 +9,11 @@ from pathlib import Path
 from decimal import Decimal
 
 
+class ShellsyNtaxError(SyntaxError):
+    def show(self):
+        print(self)
+
+
 class Context(dict):
     pass
 
@@ -97,7 +102,7 @@ class Expression(ShellsyCustomType):
 
 
 class PythonEvaluator(Expression.Evaluator):
-    prefix = ">"
+    prefix = "py"
 
     def evaluate(self):
         return eval(self.string, self.context)
@@ -118,6 +123,25 @@ class Point(tuple, ShellsyCustomType):
 
     def __repr__(self):
         return f"Point{tuple.__repr__(self)}"
+
+
+class ShellsyWord:
+    class DoesNotExist(ShellsyNtaxError, ValueError):
+        pass
+
+    words = ["else", "as"]
+
+    def __init__(self, name):
+        if name not in ShellsyWord.words:
+            raise ShellsyWord.DoesNotExist(name)
+        self.name = name
+
+    @classmethod
+    def add(cls, name):
+        ShellsyWord.words.append(name)
+
+    def __repr__(self):
+        return f":{self.name}:"
 
 
 class NilType:
@@ -189,11 +213,6 @@ class ArgumentTypeMismatch(TypeError):
         print(msg)
 
 
-class ShellsyNtaxError(SyntaxError):
-    def show(self):
-        print(self)
-
-
 @annotate
 def evaluate_literal(string: str) -> Literal:
     digits = set("01234567890e-E")
@@ -209,6 +228,8 @@ def evaluate_literal(string: str) -> Literal:
         return False
     elif string == "Nil":
         return Nil
+    elif string in ShellsyWord.words:
+        return ShellsyWord(string)
     elif string[0] == "$":
         return Variable(string[1:])
     elif len(string_set - digits) == 0:
@@ -221,7 +242,7 @@ def evaluate_literal(string: str) -> Literal:
         return str(string[1:-1])
     elif string[0] == string[-1] == "/":
         return Path(string[1:-1])
-    elif ":" in string:
+    elif ":" in string and len(string_set - slice_set) == 0:
         if len(string_set - slice_set) == 0:
             return slice(*map(int, string.split(":")))
         raise ShellsyNtaxError(
@@ -233,7 +254,9 @@ def evaluate_literal(string: str) -> Literal:
             map(lambda x: float(x) if "." in x else int(x), string.split(","))
         )
     elif len(string) >= 3 and string[0] == "(" and string[-1] == ")":
-        return Expression(string[1], string[2:-1])
+        if "#" in string and string[:(idx := string.index("#"))].isalpha():
+            return Expression(string[:idx], string[idx + 1:])
+        return Expression("py", string)
     elif len(string) >= 2 and string[0] == "{" and string[-1] == "}":
         return CommandBlock.from_string(string[1:-1])
     raise ShellsyNtaxError(f"Unrecognised literal: {string!r}")
@@ -393,8 +416,12 @@ class CommandCall:
     @classmethod
     @annotate
     def from_string_parts(cls, parts: Iterable[str]):
-        name, *args = parts
-        return cls(name, args)
+        if len(parts) == 0:
+            name = ""
+            args = []
+        else:
+            name, *args = parts
+        return cls(name, Arguments.from_string_parts(args))
 
     def __str__(self):
         return f"<Command:{self.command}{self.arguments}>"

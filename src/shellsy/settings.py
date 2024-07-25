@@ -42,3 +42,13 @@ def init():
     if not settings:
         settings = SettingsFile(os.path.join(data_dir, "settings.json"), {
         })
+
+
+def get_setting(name, default=None):
+    settings.load()
+    return settings.get(name, default)
+
+
+def set_setting(name, val):
+    settings[name] = val
+    settings.save()

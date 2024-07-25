@@ -27,7 +27,7 @@ except FileNotFoundError:
         except FileNotFoundError:
             long_description = (project_dir.parent / "README.md").read_text()
 
-deps = ("pyoload", "prompt_toolkit", "comberload")
+deps = ("pyoload", "prompt_toolkit", "comberload", "rich")
 
 extra_flake8 = ()
 

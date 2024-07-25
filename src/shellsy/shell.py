@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Iterable
 from .settings import *
 from inspect import _empty
+from rich import print
 
 
 class NoSuchCommand(ValueError):
@@ -131,8 +132,11 @@ class Shell(Command):
 
     def get_styles(self):
         from prompt_toolkit.styles import Style
+        from prompt_toolkit.styles import style_from_pygments_cls, merge_styles
+        from pygments.styles import get_style_by_name
 
-        return Style.from_dict(
+        base_style = style_from_pygments_cls(get_style_by_name(get_setting("stylename", "monokai")))
+        custom_style = Style.from_dict(
             {
                 # "": "#ffffff",
                 "shellname": "#884444",
@@ -141,16 +145,11 @@ class Shell(Command):
                 "cwdpath": "#ffff45",
                 "prompt": "#00aa00",
                 "path": "ansicyan underline",
-                "pygments.keyword": "underline",
-                "pygments.name.function": "underline reverse",
-                "pygments.name.label": "#ff7700 underline",
-                "pygments.literal.string": "#ffff00",
-                "pygments.literal.number": "#ff77ff",
-                "pygments.literal.number.float": "#770077",
-                "pygments.punctuation": "#ff0000",
-                "pygments.error": "bg:#ff0000 underline",
+                "pygments.error": "bg:red",
+                "pygments.punctuation": "red",
             }
         )
+        return merge_styles([base_style, custom_style])
 
     @comberload(
         "prompt_toolkit",
@@ -161,7 +160,6 @@ class Shell(Command):
         import prompt_toolkit
         from prompt_toolkit.history import FileHistory
         from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-
         cwd = self.format_cwd()
         return prompt_toolkit.prompt(
             validate_while_typing=True,
@@ -246,6 +244,7 @@ class Shell(Command):
                     )
                     for command in self.get_possible_subcommands()
                 ],
+                *[(f"\\b{c}\\b", Keyword) for c in ShellsyWord.words],
                 (
                     r"^(\$)([\w_]+)\s*(\:)",
                     bygroups(Punctuation, Name.Variable, Keyword),
@@ -253,10 +252,14 @@ class Shell(Command):
                 (r"^([\w._]+)", Error),
                 (r"True|False|Nil", Keyword),
                 (
-                    r"(\()(.)(.*)(\))",
+                    r"(\()(\w+)#(.*)(\))",
                     bygroups(
                         Punctuation, Keyword, String.Single, Punctuation
                     ),
+                ),
+                (
+                    r"\(",
+                    Punctuation, "python-expression",
                 ),
                 (
                     r"(?<!^)(\$)([\w_]+)",
@@ -295,6 +298,7 @@ class Shell(Command):
 
             tokens = {
                 "root": [
+                    (r'^\s*#.+', Comment.Single),
                     (r"\{", Punctuation, "commandblock"),
                     *commands,
                 ],
@@ -309,6 +313,99 @@ class Shell(Command):
                     (r"\}", Punctuation, "#pop"),
                     (r";", Punctuation),
                     *commands,
+                ],
+                'python-expression': [
+                    # (r'[^\(]+', Punctuation),
+                    (r'\)', Punctuation, '#pop'),  # End of inline Python
+                    include('python'),  # Include Python lexer rules
+                ],
+                'python': [
+                    (r'\s+', Text),
+                    (r'\\\n', Text),
+                    (r'\\', Text),
+                    (r'(print|exec|assert|lambda)\b', Keyword),
+                    (r'(if|else|elif|while|for|try|except|finally|with|as|'
+                     r'pass|break|continue|return|yield|raise|del|global|'
+                     r'nonlocal|assert|True|False|None|and|or|not|is|in)\b', Keyword),
+                    (r'(self|cls)\b', Name.Builtin.Pseudo),
+                    (r'(Ellipsis|NotImplemented)\b', Name.Builtin.Pseudo),
+                    (r'(abs|divmod|input|open|staticmethod|all|enumerate|int|ord|str|'
+                     r'any|eval|isinstance|pow|sum|ascii|exec|issubclass|print|super|'
+                     r'bin|filter|iter|property|tuple|bool|float|len|range|type|'
+                     r'bytearray|format|list|repr|vars|bytes|frozenset|locals|'
+                     r'reversed|zip|callable|getattr|map|round|__import__|chr|globals|'
+                     r'max|set|complex|hasattr|memoryview|slice|delattr|hash|min|'
+                     r'sorted|dict|help|next|staticmethod|dir|hex|object|str|'
+                     r'enumerate|id|oct|sum|exec|input|open|property|type|print|'
+                     r'staticmethod|sorted|super|vars|all|any|bin|bool|bytearray|'
+                     r'bytes|callable|chr|classmethod|compile|complex|delattr|dict|'
+                     r'dir|divmod|enumerate|eval|filter|float|format|frozenset|getattr|'
+                     r'globals|hasattr|hash|help|hex|id|input|int|isinstance|'
+                     r'issubclass|iter|len|list|locals|map|max|memoryview|min|next|'
+                     r'object|oct|open|ord|pow|property|range|repr|reversed|round|'
+                     r'set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|'
+                     r'vars|zip|__import__)\b', Name.Builtin),
+                    (r'(True|False|None)\b', Name.Builtin.Pseudo),
+                    (r'(int|long|float|complex)\b', Name.Builtin),
+                    (r'(set|list|dict|tuple|frozenset)\b', Name.Builtin),
+                    (r'(object|type)\b', Name.Builtin),
+                    (r'(BaseException|Exception|ArithmeticError|BufferError|'
+                     r'LookupError|AssertionError|AttributeError|EOFError|'
+                     r'FloatingPointError|GeneratorExit|ImportError|ModuleNotFoundError|'
+                     r'IndexError|KeyError|KeyboardInterrupt|MemoryError|NameError|'
+                     r'NotImplementedError|OSError|OverflowError|RecursionError|'
+                     r'ReferenceError|RuntimeError|StopIteration|StopAsyncIteration|'
+                     r'SyntaxError|IndentationError|TabError|SystemError|SystemExit|'
+                     r'TypeError|UnboundLocalError|UnicodeError|UnicodeEncodeError|'
+                     r'UnicodeDecodeError|UnicodeTranslateError|ValueError|'
+                     r'ZeroDivisionError)\b', Name.Builtin.Exception),
+                    (r'(abs|all|any|ascii|bin|bool|bytearray|bytes|callable|chr|'
+                     r'classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|'
+                     r'eval|exec|filter|float|format|frozenset|getattr|globals|'
+                     r'hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|'
+                     r'len|list|locals|map|max|memoryview|min|next|object|oct|open|'
+                     r'ord|pow|print|property|range|repr|reversed|round|set|setattr|'
+                     r'slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|'
+                     r'__import__)\b', Name.Builtin),
+                    (r'@\w+', Name.Decorator),
+                    (r'@[A-Za-z_]\w*', Name.Decorator),
+                    (r'(None|True|False|Ellipsis|NotImplemented)\b', Name.Builtin.Pseudo),
+                    (r'(\d+\.\d*|\.\d+|\d+\.|\d+)([eE][+-]?\d+)?j?\b', Number.Float),
+                    (r'0x[0-9a-fA-F]+', Number.Hex),
+                    (r'0b[01]+', Number.Bin),
+                    (r'0o[0-7]+', Number.Oct),
+                    (r'\d+j?\b', Number.Integer),
+                    (r'"(\\\\|\\"|[^"])*"', String.Double),
+                    (r"'(\\\\|\\'|[^'])*'", String.Single),
+                    (r'\\\n', String),
+                    (r'\\', String),
+                    (r'`.*?`', String.Backtick),
+                    (r'\r\n|\n', Text),
+                    (r'\r', Text),
+                    (r'[\[\]{}:(),;]', Punctuation),
+                    (r'==|!=|<=|>=|<<|>>|->|\+=|-=|\*=|/=|//=|%=|&=|\|=|^=|>>=|<<=|@=|\*\*|//|->|<<|>>|<>|!=|<=|>=|==|->|:|'
+                     r'\+|-|\*|/|%|&|\||\^|~|<|>', Operator),
+                    (r'(not|and|or)\b', Operator.Word),
+                    (r'\.', Operator),
+                    (r'=', Operator),
+                    (r'\+\+|--|\*\*|//|\|\|', Operator),
+                    (r'[*<>!&^~@|\-+=/%]', Operator),
+                    (r'[()\[\]{}:.,;@]', Punctuation),
+                    (r'\b(print|exec|assert|lambda|yield|return|import|from|class|def|'
+                     r'elif|else|try|except|finally|raise|while|for|in|and|or|not|is|'
+                     r'with|as|pass|break|continue|del|global|nonlocal|if|True|False|'
+                     r'None)\b', Keyword),
+                    (r'@[A-Za-z_]\w*', Name.Decorator),
+                    (r'__\w+__', Name.Function.Magic),
+                    (r'__\w+__', Name.Variable.Magic),
+                    (r'__\w+__', Name.Class.Magic),
+                    (r'__\w+__', Name.Constant.Magic),
+                    (r'__[a-zA-Z_]\w*__', Name.Builtin.Pseudo),
+                    (r'__[a-zA-Z_]\w*__', Name.Function.Magic),
+                    (r'__[a-zA-Z_]\w*__', Name.Variable.Magic),
+                    (r'__[a-zA-Z_]\w*__', Name.Class.Magic),
+                    (r'__[a-zA-Z_]\w*__', Name.Constant.Magic),
+                    (r'[a-zA-Z_]\w*', Name),
                 ]
             }
 
@@ -344,6 +441,11 @@ class Shell(Command):
 
     @annotate
     def call(self, call: CommandCall):
+        if not call.command:
+            if hasattr(self, "__entrypoint__"):
+                self.__entrypoint__(call.arguments)
+            else:
+                raise NoSuchCommand(f"{self.name} has no entry point")
         name, inner = call.inner()
         if name in self.commands:
             return self.commands[name](self, inner.arguments)

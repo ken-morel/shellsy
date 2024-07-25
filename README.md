@@ -35,7 +35,7 @@ from shellsy import Shell, Command
 
 class Cmd(Shell):
     @Command
-    def echo(val):
+    def echo(shell, val):
         print(repr(val))
 
 
