@@ -7,7 +7,9 @@ from pyoload import *
 from typing import Callable
 from typing import Iterable
 from .settings import *
+from .help import CommandHelp
 from rich.console import Console
+from rich.markdown import Markdown
 import time
 
 console = Console()
@@ -38,15 +40,37 @@ class NoSuchCommand(ValueError):
 
 class Command:
     params: CommandParameters
+    dispatches = []
 
     def __init__(self, func: Callable):
+        from inspect import signature
         self.params = CommandParameters.from_function(func)
         self.__func__ = func
+        self.name = func.__name__
+        self.signature = signature(func)
+        self.help = CommandHelp.from_command(self)
 
     @annotate
     def __call__(self, shell, args: Arguments):
-        args = self.params.bind(args)
-        return self.__func__(shell, **args)
+        if len(self.dispatches) == 0:
+            args = self.params.bind(args)
+            return self.__func__(shell, **args)
+        else:
+            for cmd in [self] + self.dispatches:
+                try:
+                    args = cmd.params.bind(args, should_dispatch=True)
+                except ShouldDispath:
+                    continue
+                else:
+                    return cmd.__func__(shell, **args)
+            else:
+                raise NoSuchCommand("No dispatch matches arguments")
+
+    def __set_name__(self, cls, name):
+        self.name = name
+
+    def dispatch(self, func):
+        self.dispatches.append(Command(func))
 
 
 class Shell(Command):
@@ -60,7 +84,13 @@ class Shell(Command):
     def __init_subclass__(cls):
         cls.name = cls.__name__.lower()
 
-    def __init__(self):
+    def __init__(self, parent=None):
+        if parent:
+            self.parent = parent
+            self.master = parent.master
+        else:
+            self.parent = None
+            self.master = self
         if not hasattr(self, "subshells"):
             self.subshells = {}
         if not hasattr(self, "commands"):
@@ -78,10 +108,10 @@ class Shell(Command):
                         attr = attr[1:]
                     self.commands[attr] = cmd
                 elif issubclass(subcls := getattr(self, attr), Shell):
-                    subcls.shell = self
+                    subcls.master = self.master
                     if attr[0] == "_":
                         attr = attr[1:]
-                    self.subshells[attr] = subcls()
+                    self.subshells[attr] = subcls(parent=self)
             except (AttributeError, TypeError):
                 pass
 
@@ -362,6 +392,22 @@ class Shell(Command):
         else:
             raise NoSuchCommand("no such subcommand", name)
 
+    @annotate
+    def get_command(self, cmd: str):
+        call = CommandCall.from_string(cmd)
+        if not call.command:
+            if "__entrypoint__" in self.commands:
+                return self.commands["__entrypoint__"]
+            else:
+                raise NoSuchCommand(f"{self.name} has no entry point")
+        name, inner = call.inner()
+        if name in self.commands:
+            return self.commands[name]
+        elif name in self.subshells:
+            return self.subshells[name].get_command(inner.command)
+        else:
+            raise NoSuchCommand("no such subcommand to get", name)
+
     def cmdloop(self):
         self.should_run = True
         while self.should_run:
@@ -372,22 +418,25 @@ class Shell(Command):
                 elif len(text) == 0 or text[0] == "#":
                     continue
                 else:
-                    pprint(self(text))
+                    val = self(text)
+                    context["_"] = val
+                    context["out"].append(val)
+                    pprint(val)
             except (
                 NoSuchCommand,
                 ArgumentTypeMismatch,
                 ShellsyNtaxError,
             ) as e:
                 e.show()
-            except Exception:
-                try:
-                    console.print_exception()
-                except Exception as e:
-                    print(e)
+            # except Exception:
+            #     try:
+            #         console.print_exception()
+            #     except Exception as e:
+            #         print(e)
 
-                if input(
-                    "Do you want to continue (y/n)? "
-                ).lower()[-1:] == "y":
-                    continue
-                else:
-                    break
+            #     if input(
+            #         "Do you want to continue (y/n)? "
+            #     ).lower()[-1:] == "y":
+            #         continue
+            #     else:
+            #         break

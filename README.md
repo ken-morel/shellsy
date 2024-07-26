@@ -154,6 +154,51 @@ F:\shellsy\src> shellsy
 <Commands{<Command:echo((3,), {})>}>
 ```
 
+### list
+
+The list permit you to create a python list of any other type, it consists
+of the list items, seperated by spaces and surrounded by square braces
+
+```bash
+F:\shellsy\src> shellsy
+> echo [1 'is not' as ['good' 'nice'] as 3.6 'or' 2:3 "neither" 2,4,6 {echo True}]
+[1, 'is not', as, ['good', 'nice'], as, Decimal('3.6'), 'or', slice(2, 3, None), 'neither', Point(2, 4, 6),
+{<echo([True], {})}]
+
+```
+
+an empty list is represented by `[]`
+
+### dictionary
+
+A dictionary holds key value pairs as passed to a command argument, in
+the form `-key value`. If the value next to key is another key or key has no next
+value, then it will be set to `Nil`.
+
+```bash
+{'age': -6, 'name': 'John negative', 'contacts': {}, 'children': []}
+```
+
+an empty dictionary is represented by `[-]`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Builtin commands
 

@@ -96,7 +96,6 @@ def for_shell(shell):
         tokens = {
             "root": [
                 (r"^\s*#.+", Comment.Single),
-                (r"\{", Punctuation, "commandblock"),
                 include("shellsy-statement"),
             ],
             "pathcontent": [
@@ -117,7 +116,7 @@ def for_shell(shell):
             "commandblock": [
                 (r"\}", Punctuation, "#pop"),
                 (r";", Punctuation),
-                include("shellsy-arguments"),
+                include("shellsy-statement"),
             ],
             "python-expression": [
                 # (r'[^\(]+', Punctuation),
@@ -780,6 +779,7 @@ def for_shell(shell):
             "tokens": ShellsyLexer.tokens
             | {
                 "shellsy-arguments": [
+                    (r"\{", Punctuation, "commandblock"),
                     (r"(True|False|Nil|None)", Keyword),
                     (
                         r"(\()(\w+)#(.*)(\))",

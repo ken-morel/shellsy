@@ -4,6 +4,11 @@ from .lang import *
 from typing import Any
 
 
+class ShouldDispath(ValueError):
+    def __init__(self, exc):
+        self.exception = exc
+
+
 @annotate
 class CommandCall:
     command: str
@@ -50,7 +55,7 @@ class CommandCall:
         return cls(name, Arguments.from_string_parts(args))
 
     def __str__(self):
-        return f"<Command:{self.command}{self.arguments}>"
+        return f"{self.command}{self.arguments}"
 
 
 class CommandParameter:
@@ -71,7 +76,7 @@ class CommandParameter:
 
     def __str__(self):
         mode = ("/", "/*", "*")[self.mode]
-        return f"<{self.name}: {self.type} = {self.default}, {mode}>"
+        return f"{self.name}: {self.type} = {self.default}, {mode}"
 
 
 class CommandParameters:
@@ -86,7 +91,9 @@ class CommandParameters:
         return cls(params)
 
     @annotate
-    def bind(self, args: Arguments) -> dict[str, Literal | Any]:
+    def bind(
+        self, args: Arguments, should_dispatch: bool = False
+    ) -> dict[str, Literal | Any]:
         kwargs = {}
         for idx, param in enumerate(self.params):
             if param.name in args.kwargs:
@@ -96,7 +103,12 @@ class CommandParameters:
             elif param.default is not _empty:
                 kwargs[param] = param.default
             else:
-                raise ArgumentError(f"missing argument for {param}")
+                if should_dispatch:
+                    raise ShouldDispath(
+                        ArgumentError(f"missing argument for {param}")
+                    )
+                else:
+                    raise ArgumentError(f"missing argument for {param}")
         final_args = {}
         for param, val in kwargs.items():
             if val == param.default:
@@ -118,9 +130,12 @@ class CommandParameters:
                 idx = -1
                 if val in args.args:
                     idx = args.args.index(val)
-                raise ArgumentTypeMismatch(param, val)
+                if should_dispatch:
+                    raise ShouldDispath(ArgumentTypeMismatch(param, val))
+                else:
+                    raise ArgumentTypeMismatch(param, val)
             final_args[param.name] = val
         return final_args
 
     def __str__(self):
-        return f"<CommandParameters:[{', '.join(map(str, self.params))}]>"
+        return f"_({', '.join(map(str, self.params))})"

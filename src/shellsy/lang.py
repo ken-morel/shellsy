@@ -1,5 +1,4 @@
 import os
-import comberload
 from decimal import Decimal
 from pathlib import Path
 from pyoload import *
@@ -10,17 +9,14 @@ class Context(dict):
     pass
 
 
-context = Context()
+context = Context({
+    "_": None,
+    "out": [],
+})
 
 
 class ShellsyNtaxError(SyntaxError):
-    @comberload("prompt_toolkit")
     def show(self):
-        from prompt_toolkit import print_formatted_text, HTML
-        print(self)
-
-    @show.failback
-    def _show(self):
         print(self)
 
 
@@ -116,9 +112,11 @@ class Word(ShellsyCustomType, metaclass=_WordsMeta):
             return cls._instance
 
 
-Word.add("as")  # representation
-Word.add("else")  # for if
-Word.add("in")  # membership
+Word.add("else")
+Word.add("as")
+Word.add("and")
+Word.add("or")
+Word.add("nor")
 
 
 class CommandBlock(ShellsyCustomType):

@@ -4,6 +4,7 @@ from typing import Iterable
 from setuptools import find_packages
 from . import settings
 import os
+from pathlib import Path
 
 
 @dataclass
@@ -17,7 +18,7 @@ class PluginConf:
 
 @annotate
 def initialize_plugin(
-    path,
+    path: Path | str,
     name: str,
     author: str,
     version: str,
@@ -25,7 +26,10 @@ def initialize_plugin(
     description: str = "A test plugin",
     requirements: Iterable[str] = (),
 ):
-    os.mkdirs(path)
+    try:
+        os.makedirs(path)
+    except FileExistsError:
+        pass
     os.chdir(path)
     open("setup.py", "w").write(
         f"""\
@@ -87,7 +91,10 @@ setup(
 )
 """
     )
-    os.mkdir(name)
+    try:
+        os.mkdir(name)
+    except FileExistsError:
+        pass
     open(f"{name}/__init__.py", "w").write(f"""\
 {description!r}
 __version__ = {version!r}
@@ -131,4 +138,4 @@ class Plugin:
 
     @classmethod
     def list(cls):
-        return map(cls, find_packages(settings.plugin_dir))
+        return list(map(cls, find_packages(settings.plugin_dir)))
