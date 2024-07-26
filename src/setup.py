@@ -4,6 +4,7 @@ from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
 from shellsy import __version__ as version
+import os
 
 project_dir = Path(__file__).parent
 

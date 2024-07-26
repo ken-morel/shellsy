@@ -1,10 +1,15 @@
 import json
 import os
+import sys
+
+from . import __author__ as author
+from . import __name__ as name
+from . import __version__ as version
 from appdirs import user_data_dir
-from . import __author__ as author, __version__ as version, __name__ as name
 
 data_dir = user_data_dir(name, author, version, True)
 history = os.path.join(data_dir, "history.log")
+plugin_dir = os.path.join(data_dir, "plugins")
 
 
 class SettingsFile(dict):
@@ -37,8 +42,13 @@ _settings = None
 
 def init():
     global _settings
+    os.environ.setdefault("SHELLSYPATH", plugin_dir)
+    for p in os.environ.get("SHELLSYPATH").split(";"):
+        sys.path.append(p)
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
+    if not os.path.exists(plugin_dir):
+        os.makedirs(plugin_dir)
     if not _settings:
         _settings = SettingsFile(os.path.join(data_dir, "settings.json"), {})
 

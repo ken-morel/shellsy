@@ -8,9 +8,27 @@ from typing import Callable
 from typing import Iterable
 from .settings import *
 from rich.console import Console
+import time
 
 console = Console()
 pprint = console.print
+
+
+class StatusText:
+    to_show = []
+    shown = []
+    showing = []
+    cache_size = 50
+
+    def __init__(self, text, duration):
+        self.text = text
+        self.duration = duration
+        StatusText.to_show.append(self)
+
+    @classmethod
+    def clear(cls):
+        cls.shown.extend(cls.showing)
+        cls.showing.clear()
 
 
 class NoSuchCommand(ValueError):
@@ -36,6 +54,7 @@ class Shell(Command):
     prompt_session = None
     _lexer = None
     _bindings = None
+    _log = ""
     console: Console = console
 
     def __init_subclass__(cls):
@@ -48,6 +67,8 @@ class Shell(Command):
             self.commands = {}
 
         for attr in dir(self):
+            if attr == "__entrypoint__":
+                self.commands["__entrypoint__"] = getattr(self, attr)
             if attr.startswith("__"):
                 continue
             try:
@@ -123,7 +144,7 @@ class Shell(Command):
         if shortens[0]:
             return [
                 ("class:envpath", "%" + shortens[0] + "%"),
-                ("class:cwdpath", cwd[len(shortens[1]):]),
+                ("class:cwdpath", cwd[len(shortens[1]) :]),
             ]
         else:
             drive, path = os.path.splitdrive(cwd)
@@ -184,7 +205,7 @@ class Shell(Command):
             key_bindings=self.key_bindings(),
         )
 
-    @get_input.fallback
+    @get_input.failback
     def raw_get_input(self):
         return input(self.name + "> ")
 
@@ -208,34 +229,80 @@ class Shell(Command):
         class ShellCompleter(Completer):
             def get_completions(_self, document, complete_event):
                 # self.get_possible_subcommands()
+                from string import ascii_letters
+                from pathlib import Path
+
                 line = document.current_line_before_cursor
                 # yield Completion(line, start_position=0)
-                if " " not in line:
-                    comps = []
-                    for cmd in self.get_possible_subcommands():
-                        comps.append((similarity(line, cmd[: len(line)]), cmd))
-                    comps.sort(key=lambda c: -c[0] * 100)
-                    for _, comp in comps:
-                        yield Completion(comp, start_position=-len(line))
-                elif not line.endswith(" "):
-                    _, line = line.split(" ", 1)
-                    if " " in line and not line.endswith(" "):
-                        _, word = line.rsplit(" ", 1)
+                comps = []
+                if len(line) == 0:
+                    return
+                if (
+                    line[0] == "$"
+                    and len(set(line[1:]) - set(ascii_letters + "_")) == 0
+                ):
+                    for v in context:
+                        v = "$" + v
+                        comps.append((similarity(line[1:], v), v))
+                    StatusText(repr(context.get(line[1:])), 5)
+                    comps.sort(key=lambda k: -k[0])
+                    for _, x in comps:
+                        yield Completion(x, start_position=-len(line))
+                    return
+                if (
+                    " /" in line
+                    and not line.endswith(" /")
+                    and len(
+                        set(line[line.rindex(" /") + 1 :])
+                        - set(ascii_letters + "/\\ :-.")
+                    )
+                    == 0
+                ):
+                    *_, fpath = line.rsplit(" /", 1)
+                    path, *_ = fpath.rsplit("/", 1)
+                    all = Path(path)
+                    if all.exists() and all.is_dir():
+                        for sub in all.glob("*"):
+                            comps.append(
+                                (
+                                    similarity(fpath, str(sub)[: len(fpath)]),
+                                    str(sub),
+                                    -len(fpath),
+                                )
+                            )
                     else:
-                        word = line
-                    comps = []
-                    for sword in tuple(Word.words.keys()) + (
-                        "None",
-                        "Nil",
-                        "True",
-                        "False",
-                    ):
+                        for sword in tuple(Word.words.keys()) + (
+                            "None",
+                            "Nil",
+                            "True",
+                            "False",
+                        ):
+                            comps.append(
+                                (
+                                    similarity(line, sword[: len(line)]),
+                                    sword,
+                                    -len(line),
+                                )
+                            )
+                if " " not in line:
+                    for cmd in self.get_possible_subcommands():
+                        cmd = cmd.replace(".__entrypoint__", "")
                         comps.append(
-                            (similarity(line, sword[: len(line)]), sword)
+                            (
+                                similarity(line, cmd[: len(line)]),
+                                cmd,
+                                -len(line),
+                            )
                         )
-                    comps.sort(key=lambda c: -c[0] * 100)
-                    for _, comp in comps:
-                        yield Completion(comp, start_position=-len(word))
+                elif not line.endswith(" "):
+                    _, cline = line.split(" ", 1)
+                    if " " in cline and not cline.endswith(" "):
+                        _, word = cline.rsplit(" ", 1)
+                    else:
+                        word = cline
+                comps.sort(key=lambda c: -c[0] * 100)
+                for _, comp, pos in comps:
+                    yield Completion(comp, start_position=pos)
 
         return ShellCompleter()
 
@@ -248,29 +315,43 @@ class Shell(Command):
         return possible
 
     def bottom_toolbar(self):
-        return "bottom_toolbar"
+        for idx, stat in reversed(tuple(enumerate(StatusText.showing[:]))):
+            if (time.perf_counter() - stat.begin) > stat.duration:
+                StatusText.showing.pop(idx)
+                StatusText.shown.append(stat)
+                StatusText.shown = StatusText.shown[-StatusText.cache_size :]
+        for stat in StatusText.to_show:
+            stat.begin = time.perf_counter()
+            StatusText.showing.append(stat)
+        StatusText.to_show.clear()
+        return ";".join([x.text for x in StatusText.showing])
 
     def right_prompt(self):
-        return "rptompt"
+        return ""
 
     @annotate
-    def __call__(self, args: str | Iterable[str] = "", loop: bool = True):
+    def __call__(self, args: str | Iterable[str] = ""):
         if isinstance(args, str):
             args = CommandCall.from_string(args)
         else:
             args = CommandCall.from_string_parts(args)
+        if args is None:
+            StatusText("could not parse that.")
+            return
         if args.command:
             return self.call(args)
-        elif loop:
-            return self.cmdloop()
         else:
-            return None
+            if "__entrypoint__" in self.commands:
+                return self.commands["__entrypoint__"](self, args.arguments)
+            else:
+                StatusText(self.__class__.__name__ + " has no entry point")
+                return None
 
     @annotate
     def call(self, call: CommandCall):
         if not call.command:
-            if hasattr(self, "__entrypoint__"):
-                self.__entrypoint__(call.arguments)
+            if "__entrypoint__" in self.commands:
+                return self.commands["__entrypoint__"](self, call.arguments)
             else:
                 raise NoSuchCommand(f"{self.name} has no entry point")
         name, inner = call.inner()
@@ -288,19 +369,25 @@ class Shell(Command):
                 text = self.get_input()
                 if text is None:
                     break
+                elif len(text) == 0 or text[0] == "#":
+                    continue
                 else:
-                    call = CommandCall.from_string(text)
-                    ret = self.call(call)
-                    pprint(ret)
+                    pprint(self(text))
             except (
                 NoSuchCommand,
                 ArgumentTypeMismatch,
                 ShellsyNtaxError,
             ) as e:
                 e.show()
-            # except Exception as e:
-            #     console.print_exception(show_locals=True)
-            #     if input("continue? (y/n)> ").lower().startswith("y"):
-            #         continue
-            #     else:
-            #         break
+            except Exception:
+                try:
+                    console.print_exception()
+                except Exception as e:
+                    print(e)
+
+                if input(
+                    "Do you want to continue (y/n)? "
+                ).lower()[-1:] == "y":
+                    continue
+                else:
+                    break

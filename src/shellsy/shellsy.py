@@ -59,7 +59,19 @@ class Shellsy(Shell):
                 return else_.evaluate(shell)
             return None
 
-    class Config(Shell):
+    @Command
+    def _while(
+        shell,
+        condition: Expression,
+        then: CommandBlock,
+    ):
+        ret = None
+        while condition():
+            ret = then.evaluate(shell)
+
+        return ret
+
+    class config(Shell):
         @Command
         def set(shell, name: str, val: Any):
             set_setting(name, val)
@@ -68,3 +80,18 @@ class Shellsy(Shell):
         @Command
         def get(shell, name: str):
             return get_setting(name)
+
+    class status(Shell):
+        @Command
+        def __entrypoint__(shell):
+            for x in StatusText.showing:
+                pprint(x)
+            return None
+
+        @Command
+        def add(shell, text: str, dur: int = 5000):
+            return StatusText(text, dur)
+
+        @Command
+        def clear(shell):
+            return StatusText.clear()

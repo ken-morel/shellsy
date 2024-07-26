@@ -4,122 +4,6 @@ from .lang import *
 from typing import Any
 
 
-class Arguments:
-    def __init__(self, args, kwargs):
-        self.args = args
-        self.kwargs = kwargs
-
-    def __str__(self):
-        return f"({self.args}, {self.kwargs})"
-
-    @classmethod
-    @annotate
-    def from_string(cls, string: str):
-        pos = 0
-        string_parts = [""]
-        # split string
-        while pos < len(string):
-            if string[pos] in ("'\""):
-                quote = string[pos]
-                text = quote
-                pos += 1
-                while pos < len(string):
-                    if string[pos] == "\\":
-                        if len(string) == pos + 1:
-                            raise ShellsyNtaxError(
-                                f"Escaped nothing at end of string:{string!r}"
-                            )
-                        elif string[pos + 1] in ("'\"\\"):
-                            text += string[pos + 1]
-                            pos += 2
-                        else:
-                            raise ShellsyNtaxError(
-                                f"unknown escape {string[pos:pos+2]!r} in"
-                                f" {string!r}"
-                            )
-                    elif string[pos] == quote:
-                        pos += 1
-                        break
-                    else:
-                        text += string[pos]
-                        pos += 1
-                string_parts.append(text + quote)
-            elif string[pos] == "/":
-                begin = pos
-                pos += 1
-                while pos < len(string) and not (
-                    string[pos] == "/"
-                    and (len(string) == pos + 1 or string[pos + 1].isspace())
-                ):
-                    pos += 1
-                string_parts.append(string[begin : pos + 1])
-            elif string[pos] == "(":
-                chars = ("(", ")")
-                begin = pos
-                pos += 1
-                stack = []
-                while pos < len(string):
-                    if string[pos] == ")" and len(stack) == 0:
-                        break
-                    elif string[pos] in chars[0]:
-                        stack.append(string[pos])
-                    elif string[pos] in chars[1]:
-                        stack.pop()
-                    pos += 1
-                string_parts.append(string[begin : pos + 1])
-            elif string[pos] == "{":
-                chars = ("{", "}")
-                begin = pos
-                pos += 1
-                stack = []
-                while pos < len(string):
-                    if string[pos] == "}" and len(stack) == 0:
-                        break
-                    elif string[pos] in chars[0]:
-                        stack.append(string[pos])
-                    elif string[pos] in chars[1]:
-                        stack.pop()
-                    pos += 1
-                string_parts.append(string[begin : pos + 1])
-            elif not string[pos].isspace():
-                begin = pos
-                while len(string) > pos and not string[pos].isspace():
-                    pos += 1
-                string_parts.append(string[begin:pos])
-            pos += 1
-        del pos
-        return cls.from_string_parts(tuple(filter(bool, string_parts)))
-
-    @classmethod
-    @annotate
-    def from_string_parts(cls, string_parts: Iterable[str]):
-        args = []
-        kwargs = {}
-
-        def is_key(string):
-            return string[0] == "-" and len(string) > 1 and string[1].isalpha()
-
-        idx = 0
-        while idx < len(string_parts):
-            part = string_parts[idx]
-            if is_key(part):
-                key = part[1:]
-                if idx + 1 < len(string_parts):
-                    if is_key(string_parts[idx + 1]):
-                        val = "Nil"
-                    else:
-                        val = string_parts[idx + 1]
-                        idx += 1
-                kwargs[key] = val
-            else:
-                args.append(part)
-            idx += 1
-        # evaluate literals
-        args = tuple(map(evaluate_literal, args))
-        kwargs = dict(zip(kwargs, map(evaluate_literal, kwargs.values())))
-        return Arguments(args, kwargs)
-
-
 @annotate
 class CommandCall:
     command: str
@@ -212,7 +96,7 @@ class CommandParameters:
             elif param.default is not _empty:
                 kwargs[param] = param.default
             else:
-                raise ValueError(f"missing argument for {param}")
+                raise ArgumentError(f"missing argument for {param}")
         final_args = {}
         for param, val in kwargs.items():
             if val == param.default:
