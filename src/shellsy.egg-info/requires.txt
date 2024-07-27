@@ -1,6 +1,7 @@
 pyoload
 prompt_toolkit
 comberload
+rich
 
 [ci]
 pytest

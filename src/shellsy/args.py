@@ -31,6 +31,14 @@ class CommandCall:
                 args = Variable(varname.strip()), evaluate_literal(val.strip())
             else:
                 args = (Variable(string[1:].strip()),)
+            STACKTRACE.add(
+                Stack(
+                    content=string,
+                    parent_pos=(1, 0),
+                    parent_text=string,
+                    file="<call>",
+                )
+            )
             return cls("var", Arguments(args, {}))
         else:
             cmd = ""
@@ -42,6 +50,14 @@ class CommandCall:
                 pos += 1
             cmd = string[:pos]
             args = string[pos:].strip()
+            STACKTRACE.add(
+                Stack(
+                    content=args,
+                    parent_pos=(1, pos),
+                    parent_text=string,
+                    file="<call>",
+                )
+            )
             return cls(cmd, Arguments.from_string(args))
 
     @classmethod
@@ -95,35 +111,74 @@ class CommandParameters:
         self, args: Arguments, should_dispatch: bool = False
     ) -> dict[str, Literal | Any]:
         kwargs = {}
+        STACKTRACE.add(
+            Stack(
+                content=args.full_string,
+                parent_pos=(1, 0),
+                parent_text=None,
+                file=f"<arguments>",
+            )
+        )
         for idx, param in enumerate(self.params):
             if param.name in args.kwargs:
-                kwargs[param] = args.kwargs[param.name]
+                kwargs[param] = (
+                    args.kwmaps[param.name],
+                    args.kwargs[param.name],
+                )
             elif len(args.args) > idx:
-                kwargs[param] = args.args[idx]
+                kwargs[param] = (args.argmaps[idx], args.args[idx])
             elif param.default is not _empty:
                 kwargs[param] = param.default
             else:
                 if should_dispatch:
                     raise ShouldDispath(
-                        ArgumentError(f"missing argument for {param}")
+                        ArgumentError(
+                            f"missing argument for {param}", STACKTRACE
+                        )
                     )
                 else:
-                    raise ArgumentError(f"missing argument for {param}")
+                    raise ArgumentError(
+                        f"missing argument for {param}", STACKTRACE
+                    )
         final_args = {}
-        for param, val in kwargs.items():
+        for param, ((pos, text), val) in kwargs.items():
+            STACKTRACE.add(
+                Stack(
+                    content=text,
+                    parent_pos=(1, pos),
+                    parent_text=args.full_string,
+                    file=f"<argument>",
+                )
+            )
             if val == param.default:
                 final_args[param.name] = val
                 continue
-            if isinstance(val, Variable) and param.type not in (
-                _empty,
-                Variable,
+            if isinstance(val, Variable) and (
+                param.type
+                not in (
+                    _empty,
+                    Variable,
+                )
             ):
                 val = val()
-            if isinstance(val, Expression) and param.type not in (
-                _empty,
-                Expression,
+            if isinstance(val, Expression) and (
+                param.type
+                not in (
+                    _empty,
+                    Expression,
+                )
+                or val.auto_evaluate
             ):
                 val = val()
+            if isinstance(val, CommandBlock) and (
+                param.type
+                not in (
+                    _empty,
+                    CommandBlock,
+                )
+                or val.auto_evaluate
+            ):
+                val = val.evaluate()
             if param.type not in (_empty, Any) and not isinstance(
                 val, param.type
             ):
@@ -131,9 +186,17 @@ class CommandParameters:
                 if val in args.args:
                     idx = args.args.index(val)
                 if should_dispatch:
-                    raise ShouldDispath(ArgumentTypeMismatch(param, val))
+                    raise ShouldDispath(
+                        ShellsyError(
+                            f"Argument {val!r} invalid for param {param}",
+                            STACKTRACE,
+                        )
+                    )
                 else:
-                    raise ArgumentTypeMismatch(param, val)
+                    raise ShellsyError(
+                        f"Argument {val!r} invalid for param {param}",
+                        STACKTRACE,
+                    )
             final_args[param.name] = val
         return final_args
 

@@ -33,17 +33,13 @@ class StatusText:
         cls.showing.clear()
 
 
-class NoSuchCommand(ValueError):
-    def show(self):
-        print("No Such command")
-
-
 class Command:
     params: CommandParameters
     dispatches = []
 
     def __init__(self, func: Callable):
         from inspect import signature
+
         self.params = CommandParameters.from_function(func)
         self.__func__ = func
         self.name = func.__name__
@@ -91,6 +87,7 @@ class Shell(Command):
         else:
             self.parent = None
             self.master = self
+        Shell.master = self.master
         if not hasattr(self, "subshells"):
             self.subshells = {}
         if not hasattr(self, "commands"):
@@ -241,6 +238,8 @@ class Shell(Command):
 
     @comberload("pygments.lexer", "pygments.token")
     def lexer(self):
+        if self.parent is not None:
+            return self.parent.lexer()
         if self._lexer:
             return self._lexer
 
@@ -409,34 +408,74 @@ class Shell(Command):
             raise NoSuchCommand("no such subcommand to get", name)
 
     def cmdloop(self):
+        try:
+            print(self.intro)
+        except AttributeError:
+            pass
         self.should_run = True
         while self.should_run:
+            STACKTRACE.clear()
             try:
                 text = self.get_input()
+                STACKTRACE.add(
+                    Stack(
+                        content=text or "",
+                        parent_pos=(1, 0),
+                        parent_text=None,
+                        file="<cmd>",
+                    )
+                )
                 if text is None:
                     break
                 elif len(text) == 0 or text[0] == "#":
                     continue
+                elif text[0] == "!":
+                    import os
+                    val = os.system(text[1:])
                 else:
                     val = self(text)
-                    context["_"] = val
-                    context["out"].append(val)
-                    pprint(val)
-            except (
-                NoSuchCommand,
-                ArgumentTypeMismatch,
-                ShellsyNtaxError,
-            ) as e:
+                context["_"] = val
+                context["out"].append(val)
+                pprint(f"@{len(context['out']) - 1}>", val)
+            except ShellsyError as e:
                 e.show()
-            # except Exception:
-            #     try:
-            #         console.print_exception()
-            #     except Exception as e:
-            #         print(e)
 
-            #     if input(
-            #         "Do you want to continue (y/n)? "
-            #     ).lower()[-1:] == "y":
-            #         continue
-            #     else:
-            #         break
+    def run_file(self, path):
+        with open(path) as f:
+            for line in f:
+                STACKTRACE.clear()
+                STACKTRACE.add(
+                    Stack(
+                        content=line,
+                        parent_pos=(1, 0),
+                        parent_text=None,
+                        file=f"<{path}>",
+                    )
+                )
+                line = line.strip()
+                if len(line) == 0 or line[0] == "#":
+                    continue
+                else:
+                    try:
+                        val = self(line)
+                    except ShouldDispath:
+                        pass
+                    else:
+                        context["_"] = val
+                        context["out"].append(val)
+                        pprint(f"@{len(context['out']) - 1}>", val)
+        return context["_"]
+
+    def import_subshell(self, name, as_=None):
+        mod = __import__(name + ".shellsy")
+        try:
+            plugin_shell = mod.shellsy.shellsy
+        except AttributeError as e:
+            print("Module shell not found:", e)
+        else:
+            from shellsy.lexer import for_shell
+            self.subshells[as_ or name] = plugin_shell(
+                parent=self
+            )
+            self.master._lexer = self._lexer = for_shell(shell.master)
+            return shell

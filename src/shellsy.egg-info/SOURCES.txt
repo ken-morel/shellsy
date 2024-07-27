@@ -2,6 +2,11 @@ setup.py
 shellsy/__init__.py
 shellsy/__main__.py
 shellsy/args.py
+shellsy/exceptions.py
+shellsy/help.py
+shellsy/lang.py
+shellsy/lexer.py
+shellsy/plugin.py
 shellsy/settings.py
 shellsy/shell.py
 shellsy/shellsy.py
@@ -11,4 +16,5 @@ shellsy.egg-info/dependency_links.txt
 shellsy.egg-info/entry_points.txt
 shellsy.egg-info/requires.txt
 shellsy.egg-info/top_level.txt
+shellsy/editor/__init__.py
 tests/__init__.py

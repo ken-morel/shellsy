@@ -12,6 +12,11 @@ class Shellsy(Shell):
     Welcome, to shellsy, here you will build simple tools
     """
 
+    intro = """shellsy  Copyright (C) 2024  ken-morel
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This is free software, and you are welcome to redistribute it
+under certain conditions; type `show c' for details."""
+
     @Command
     def cd(shell, path: Path = None):
         """
@@ -210,29 +215,62 @@ class Shellsy(Shell):
 
             os.system('pip install . --target "' + str(plugin_dir) + '"')
 
-        @Command
-        def load(shell, name: str):
-            """
-            Loads the specified module by importing it
-            :param name: The name of module to import
+        @install.dispatch
+        def install_from(shell, location: Path | str):
+            import os
+            from shellsy.settings import plugin_dir
 
-            :returns: THe plugin shell or `None` if fails import
-            """
-            try:
-                mod = __import__(name + ".shell")
-            except (ImportError, ModuleNotFoundError) as e:
-                print(e)
-            try:
-                plugin_shell = mod.shell.shell
-            except AttributeError as e:
-                print("Module shell not found:", e)
-            else:
-                from shellsy.lexer import for_shell
-                shell.master.subshells[name] = plugin_shell(
-                    parent=shell.master
-                )
-                shell.master._lexer = for_shell(shell.master)
-                return shell
+            os.system(
+                "pip install "
+                + str(location)
+                + ' --target "'
+                + str(plugin_dir)
+                + '"'
+            )
+
+    @Command
+    def _import(shell, name: str):
+        """
+        Loads the specified module by importing it
+        :param name: The name of module to import
+
+        :returns: THe plugin shell or `None` if fails import
+        """
+        try:
+            shell.import_subshell(name)
+        except (ImportError, ModuleNotFoundError) as e:
+            print(e)
+
+    @_import.dispatch
+    def _import_as(shell, location: str, _: Word["as"], name: str):
+        try:
+            shell.import_subshell(location, name)
+        except (ImportError, ModuleNotFoundError) as e:
+            print(e)
+
+    @_import.dispatch
+    def _import_or_install(
+        shell,
+        name: str,
+        _: Word["or"],
+        __: Word["install"],
+        ___: Word["from"],
+        location: str | Path,
+    ):
+        try:
+            shell.import_subshell(name)
+        except (ImportError, ModuleNotFoundError):
+            import os
+            from shellsy.settings import plugin_dir
+            os.system(
+                "pip install "
+                + str(location)
+                + ' --target "'
+                + str(plugin_dir)
+                + '"'
+            )
+        finally:
+            shell.import_subshell(name)
 
     class help(Shell):
         @Command
@@ -241,3 +279,7 @@ class Shellsy(Shell):
                 pprint(shell.master.get_command(command).help.markdown())
             else:
                 print("no command specified")
+
+    @Command
+    def exit(shell):
+        shell.should_run = False
