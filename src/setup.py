@@ -1,10 +1,10 @@
-
 from pathlib import Path
 
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
 from shellsy import __version__ as version
+import os
 
 project_dir = Path(__file__).parent
 
@@ -12,6 +12,7 @@ project_dir = Path(__file__).parent
 class ShellsyInstallCommand(install):
     def run(self):
         import shellsy.settings
+
         shellsy.settings.init()
         super().run()
 
@@ -27,7 +28,7 @@ except FileNotFoundError:
         except FileNotFoundError:
             long_description = (project_dir.parent / "README.md").read_text()
 
-deps = ("pyoload", "prompt_toolkit", "comberload")
+deps = ("pyoload", "prompt_toolkit", "comberload", "rich")
 
 extra_flake8 = ()
 
