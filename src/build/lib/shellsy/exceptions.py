@@ -20,11 +20,14 @@ class Stack:
         print(" " * self.parent_pos[1] + "^" * len(self.content))
 
 
+@annotate
 class StackTrace:
+    stacks: list[Stack]
+
     def __init__(self):
         self.stacks = []
 
-    def add(self, stack):
+    def add(self, stack: Stack):
         self.stacks.append(stack)
 
     def pop(self):
@@ -41,7 +44,11 @@ class StackTrace:
 STACKTRACE = StackTrace()
 
 
+@annotate
 class ShellsyError(Exception):
+    stacktrace: StackTrace
+    message: str
+
     def __init__(self, msg, stacktrace=STACKTRACE):
         self.stacktrace = stacktrace
         self.message = msg
@@ -60,4 +67,8 @@ class ArgumentError(ShellsyError):
 
 
 class NoSuchCommand(ShellsyError):
+    pass
+
+
+class ShellNotFound(ShellsyError):
     pass

@@ -113,7 +113,7 @@ shellsy_config = {dict()!r}
     open(f"{name}/shellsy.py", "w").write(f"""\
 from shellsy.shell import *
 
-class shell(Shell):
+class shellsy(Shell):
     @Command
     def __entrypoint__(shell):
         print("hello world!")

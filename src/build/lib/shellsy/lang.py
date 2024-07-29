@@ -221,9 +221,8 @@ class PythonEvaluator(Expression.Evaluator):
     def evaluate(self):
         import __main__
         import shellsy.shell
-
         try:
-            return eval(
+            return (exec if self.string.endswith(";") else eval)(
                 self.string, self.context, vars(__main__) | vars(shellsy.shell)
             )
         except Exception as e:
@@ -572,12 +571,12 @@ class Arguments:
                 args.append((pos, part))
             idx += 1
         # evaluate literals
-        args = [
-            evaluate_literal(val, pos=pos, full_string=string)
-            for pos, val in args
-        ]
         argmaps = [
             (pos, val)  # TODO: maybe simplify this if extra info not needed
+            for pos, val in args
+        ]
+        args = [
+            evaluate_literal(val, pos=pos, full_string=string)
             for pos, val in args
         ]
         kwmaps = {key: (pos, val) for key, (pos, val) in kwargs.items()}
