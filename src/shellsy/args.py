@@ -25,11 +25,16 @@ class CommandCall:
     @classmethod
     @annotate
     def from_string(cls, string: str):
+        argmaps = []
         if len(string) > 0 and string[0] == "$":
             if ":" in string:
                 varname, val = string[1:].split(":", 1)
+                val = val.strip()
+                argmaps.append((1, varname))
+                argmaps.append((len(string) - len(val), val))
                 args = Variable(varname.strip()), evaluate_literal(val.strip())
             else:
+                argmaps.append((1, string[1:].strip()))
                 args = (Variable(string[1:].strip()),)
             STACKTRACE.add(
                 Stack(
@@ -39,7 +44,12 @@ class CommandCall:
                     file="<call>",
                 )
             )
-            return cls("var", Arguments(args, {}))
+            return cls(
+                "var",
+                Arguments(
+                    args, {}, full_string=string, kwmaps={}, argmaps=argmaps
+                ),
+            )
         else:
             cmd = ""
             args = ""
@@ -53,7 +63,7 @@ class CommandCall:
             STACKTRACE.add(
                 Stack(
                     content=args,
-                    parent_pos=(1, pos),
+                    parent_pos=(1, pos + 1),
                     parent_text=string,
                     file="<call>",
                 )
@@ -128,7 +138,7 @@ class CommandParameters:
             elif len(args.args) > idx:
                 kwargs[param] = (args.argmaps[idx], args.args[idx])
             elif param.default is not _empty:
-                kwargs[param] = param.default
+                kwargs[param] = ((1, ""), param.default)
             else:
                 if should_dispatch:
                     raise ShouldDispath(

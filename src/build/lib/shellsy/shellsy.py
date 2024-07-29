@@ -213,7 +213,9 @@ under certain conditions; type `show c' for details."""
             import os
             from shellsy.settings import plugin_dir
 
-            os.system('pip install . --target "' + str(plugin_dir) + '"')
+            os.system(
+                'pip install . --target "' + str(plugin_dir) + '" --upgrade'
+            )
 
         @install.dispatch
         def install_from(shell, location: Path | str):
@@ -225,7 +227,8 @@ under certain conditions; type `show c' for details."""
                 + str(location)
                 + ' --target "'
                 + str(plugin_dir)
-                + '"'
+                + '" '
+                + "--upgrade"
             )
 
     @Command
@@ -259,15 +262,21 @@ under certain conditions; type `show c' for details."""
     ):
         try:
             shell.import_subshell(name)
-        except (ImportError, ModuleNotFoundError):
+        except (ImportError, ModuleNotFoundError, ShellNotFound):
+            try:
+                e.show()
+            except Exception:
+                pass
             import os
             from shellsy.settings import plugin_dir
+
             os.system(
                 "pip install "
                 + str(location)
                 + ' --target "'
                 + str(plugin_dir)
-                + '"'
+                + '" '
+                + "--upgrade"
             )
         finally:
             shell.import_subshell(name)

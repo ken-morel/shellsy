@@ -52,15 +52,20 @@ class Command:
             args = self.params.bind(args)
             return self.__func__(shell, **args)
         else:
+            errors = []
             for cmd in [self] + self.dispatches:
                 try:
                     args = cmd.params.bind(args, should_dispatch=True)
-                except ShouldDispath:
+                except ShouldDispath as e:
+                    errors.append(e.exception)
                     continue
                 else:
                     return cmd.__func__(shell, **args)
             else:
-                raise NoSuchCommand("No dispatch matches arguments")
+                raise NoSuchCommand(
+                    "No dispatch matches arguments\n"
+                    + "\n -".join(map(str, errors))
+                )
 
     def __set_name__(self, cls, name):
         self.name = name
@@ -431,6 +436,7 @@ class Shell(Command):
                     continue
                 elif text[0] == "!":
                     import os
+
                     val = os.system(text[1:])
                 else:
                     val = self(text)
@@ -442,28 +448,31 @@ class Shell(Command):
 
     def run_file(self, path):
         with open(path) as f:
-            for line in f:
-                STACKTRACE.clear()
-                STACKTRACE.add(
-                    Stack(
-                        content=line,
-                        parent_pos=(1, 0),
-                        parent_text=None,
-                        file=f"<{path}>",
+            try:
+                for line in f:
+                    line = line.strip()
+                    STACKTRACE.clear()
+                    STACKTRACE.add(
+                        Stack(
+                            content=line,
+                            parent_pos=(1, 0),
+                            parent_text=None,
+                            file=f"<{path}>",
+                        )
                     )
-                )
-                line = line.strip()
-                if len(line) == 0 or line[0] == "#":
-                    continue
-                else:
-                    try:
-                        val = self(line)
-                    except ShouldDispath:
-                        pass
+                    if len(line) == 0 or line[0] == "#":
+                        continue
                     else:
-                        context["_"] = val
-                        context["out"].append(val)
-                        pprint(f"@{len(context['out']) - 1}>", val)
+                        try:
+                            val = self(line)
+                        except ShouldDispath:
+                            pass
+                        else:
+                            context["_"] = val
+                            context["out"].append(val)
+                            pprint(f"@{len(context['out']) - 1}>", val)
+            except ShellsyError as e:
+                e.show()
         return context["_"]
 
     def import_subshell(self, name, as_=None):
@@ -471,11 +480,10 @@ class Shell(Command):
         try:
             plugin_shell = mod.shellsy.shellsy
         except AttributeError as e:
-            print("Module shell not found:", e)
+            print(dir(mod.shellsy), dir(mod), mod.__file__)
+            raise ShellNotFound(name + " has no shell: " + str(e)) from e
         else:
             from shellsy.lexer import for_shell
-            self.subshells[as_ or name] = plugin_shell(
-                parent=self
-            )
-            self.master._lexer = self._lexer = for_shell(shell.master)
-            return shell
+            self.subshells[as_ or name] = plugin_shell(parent=self)
+            self.master._lexer = plugin_shell._lexer = for_shell(self.master)
+            return plugin_shell

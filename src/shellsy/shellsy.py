@@ -100,10 +100,26 @@ under certain conditions; type `show c' for details."""
         else_: CommandBlock = None,
     ):
         """
-        if condition in the form `if (condition) {then} else {else}`
+            Evaluates a condition and executes a command block if the condition
+             is met.
+            If the condition is not met and an else block is provided,
+            the else block is executed.
 
-        :param condition: the condition switch
-        :param pass: THe code block to run on pass
+            :param condition: The condition to evaluate before executing the
+            'then' block. It should be a function that returns a boolean value.
+            :param then: The command block to execute if the condition is met.
+             This block contains the commands to run when the condition is true
+            :param else_: Optional - The command block to execute if the
+            condition is not met. If provided, this block will be executed when
+            the condition is false.
+
+            :returns: The result of executing the 'then' block or the 'else'
+            block if the condition is not met.
+
+            For example:
+            if (x > 5) {echo 'x > 5'} else {echo 'x <= 5'}
+
+            [[2]](https://poe.com/citation?message_id=224987918374&citation=2)
         """
         if condition():
             return then.evaluate(shell)
@@ -118,6 +134,39 @@ under certain conditions; type `show c' for details."""
         condition: Expression,
         then: CommandBlock,
     ):
+        """
+        The 'while' command in shellsy creates a loop that iterates as long as
+        a specified condition is met. This command enables the repetitive
+        execution of a block of commands until the condition evaluates to False
+
+        :param condition: The condition parameter defines the expression to be
+        evaluated in each iteration of the loop. The 'while' command will
+        continue executing the associated block of commands as long as this
+        condition remains True. It serves as the criteria for determining the
+        loop's continuation
+
+        :param command_block: The command_block parameter represents the block
+        of commands that will be executed repeatedly as part of the 'while'
+        loop. This block contains the actions or logic that should be performed
+        iteratively until the condition evaluates to False. It encapsulates the
+        commands to be executed within the loop structure
+
+        :returns: The 'while' command does not have an explicit return value,
+        as its primary function is to facilitate iterative execution based on
+        the specified condition. The execution of the command_block within the
+        loop allows for repetitive actions until the condition becomes False.
+        The return value is determined by the commands executed within the loop
+
+        Example usage:
+        _while(lambda: x > 5, CommandBlock(...))
+
+        Utilize the 'while' command in shellsy with the provided parameters and
+        syntax to implement loops that perform repetitive actions based on
+        defined conditions.
+        This feature enhances the flexibility and functionality of your scripts
+        by enabling iterative execution of commands until a specific condition
+        is no longer met
+        """
         ret = None
         while condition():
             ret = then.evaluate(shell)
@@ -213,7 +262,9 @@ under certain conditions; type `show c' for details."""
             import os
             from shellsy.settings import plugin_dir
 
-            os.system('pip install . --target "' + str(plugin_dir) + '"')
+            os.system(
+                'pip install . --target "' + str(plugin_dir) + '" --upgrade'
+            )
 
         @install.dispatch
         def install_from(shell, location: Path | str):
@@ -225,7 +276,8 @@ under certain conditions; type `show c' for details."""
                 + str(location)
                 + ' --target "'
                 + str(plugin_dir)
-                + '"'
+                + '" '
+                + "--upgrade"
             )
 
     @Command
@@ -259,15 +311,21 @@ under certain conditions; type `show c' for details."""
     ):
         try:
             shell.import_subshell(name)
-        except (ImportError, ModuleNotFoundError):
+        except (ImportError, ModuleNotFoundError, ShellNotFound):
+            try:
+                e.show()
+            except Exception:
+                pass
             import os
             from shellsy.settings import plugin_dir
+
             os.system(
                 "pip install "
                 + str(location)
                 + ' --target "'
                 + str(plugin_dir)
-                + '"'
+                + '" '
+                + "--upgrade"
             )
         finally:
             shell.import_subshell(name)

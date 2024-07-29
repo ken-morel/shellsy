@@ -1,0 +1,8 @@
+README.md
+setup.py
+storelsb/__init__.py
+storelsb/shellsy.py
+storelsb.egg-info/PKG-INFO
+storelsb.egg-info/SOURCES.txt
+storelsb.egg-info/dependency_links.txt
+storelsb.egg-info/top_level.txt

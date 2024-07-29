@@ -8,23 +8,43 @@ from typing import Callable
 from typing import Iterable
 from .settings import *
 from .help import CommandHelp
-from rich.console import Console
-from rich.markdown import Markdown
 import time
-
-console = Console()
-pprint = console.print
+from inspect import Signature
 
 
+CONSOLE = None
+
+
+@comberload("rich.console")
+def pprint(*args, **kw):
+    global CONSOLE
+    from rich.console import Console
+
+    if CONSOLE is None:
+        CONSOLE = Console()
+    CONSOLE.print(*args, **kw)
+
+
+@pprint.failback
+def pprint_failback(*args, **kw):
+    print(*args, **kw)
+
+
+@annotate
 class StatusText:
+    __slots__ = ["text", "duration", "source"]
     to_show = []
     shown = []
     showing = []
     cache_size = 50
+    source: str
+    text: str
+    duration: int
 
-    def __init__(self, text, duration):
+    def __init__(self, text: str, duration: int, source: str):
         self.text = text
         self.duration = duration
+        self.source = source
         StatusText.to_show.append(self)
 
     @classmethod
@@ -33,9 +53,14 @@ class StatusText:
         cls.showing.clear()
 
 
+@annotate
 class Command:
     params: CommandParameters
-    dispatches = []
+    dispatches: "list[Command]"
+    __func__: Callable
+    help: CommandHelp
+    name: str
+    signature: Signature
 
     def __init__(self, func: Callable):
         from inspect import signature
@@ -45,6 +70,7 @@ class Command:
         self.name = func.__name__
         self.signature = signature(func)
         self.help = CommandHelp.from_command(self)
+        self.dispatches = []
 
     @annotate
     def __call__(self, shell, args: Arguments):
@@ -52,15 +78,20 @@ class Command:
             args = self.params.bind(args)
             return self.__func__(shell, **args)
         else:
+            errors = []
             for cmd in [self] + self.dispatches:
                 try:
                     args = cmd.params.bind(args, should_dispatch=True)
-                except ShouldDispath:
+                except ShouldDispath as e:
+                    errors.append(e.exception)
                     continue
                 else:
                     return cmd.__func__(shell, **args)
             else:
-                raise NoSuchCommand("No dispatch matches arguments")
+                raise NoSuchCommand(
+                    "No dispatch matches arguments\n"
+                    + "\n -".join(map(str, errors))
+                )
 
     def __set_name__(self, cls, name):
         self.name = name
@@ -75,7 +106,6 @@ class Shell(Command):
     _lexer = None
     _bindings = None
     _log = ""
-    console: Console = console
 
     def __init_subclass__(cls):
         cls.name = cls.__name__.lower()
@@ -177,6 +207,7 @@ class Shell(Command):
             drive, path = os.path.splitdrive(cwd)
             return [("class:drivename", drive), ("class:cwdpath", path)]
 
+    @comberload("prompt_toolkit.styles", "pygments.styles")
     def get_styles(self):
         from prompt_toolkit.styles import Style
         from prompt_toolkit.styles import style_from_pygments_cls, merge_styles
@@ -246,6 +277,7 @@ class Shell(Command):
         self._lexer = lexer.for_shell(self)
         return self._lexer
 
+    @comberload("prompt_toolkit.completion")
     def shell_completer(self):
         # TDOD: move this to another file and use cls(shell)
         from prompt_toolkit.completion import Completer, Completion
@@ -349,6 +381,13 @@ class Shell(Command):
                 StatusText.showing.pop(idx)
                 StatusText.shown.append(stat)
                 StatusText.shown = StatusText.shown[-StatusText.cache_size :]
+            for ostat in StatusText.to_show:
+                if ostat.source == stat.source:
+                    StatusText.showing.pop(idx)
+                    StatusText.shown.append(stat)
+                    StatusText.shown = StatusText.shown[
+                        -StatusText.cache_size :
+                    ]
         for stat in StatusText.to_show:
             stat.begin = time.perf_counter()
             StatusText.showing.append(stat)
@@ -389,7 +428,7 @@ class Shell(Command):
         elif name in self.subshells:
             return self.subshells[name].call(inner)
         else:
-            raise NoSuchCommand("no such subcommand", name)
+            raise NoSuchCommand("no such subcommand: " + name)
 
     @annotate
     def get_command(self, cmd: str):
@@ -431,6 +470,7 @@ class Shell(Command):
                     continue
                 elif text[0] == "!":
                     import os
+
                     val = os.system(text[1:])
                 else:
                     val = self(text)
@@ -442,28 +482,31 @@ class Shell(Command):
 
     def run_file(self, path):
         with open(path) as f:
-            for line in f:
-                STACKTRACE.clear()
-                STACKTRACE.add(
-                    Stack(
-                        content=line,
-                        parent_pos=(1, 0),
-                        parent_text=None,
-                        file=f"<{path}>",
+            try:
+                for line in f:
+                    line = line.strip()
+                    STACKTRACE.clear()
+                    STACKTRACE.add(
+                        Stack(
+                            content=line,
+                            parent_pos=(1, 0),
+                            parent_text=None,
+                            file=f"<{path}>",
+                        )
                     )
-                )
-                line = line.strip()
-                if len(line) == 0 or line[0] == "#":
-                    continue
-                else:
-                    try:
-                        val = self(line)
-                    except ShouldDispath:
-                        pass
+                    if len(line) == 0 or line[0] == "#":
+                        continue
                     else:
-                        context["_"] = val
-                        context["out"].append(val)
-                        pprint(f"@{len(context['out']) - 1}>", val)
+                        try:
+                            val = self(line)
+                        except ShouldDispath:
+                            pass
+                        else:
+                            context["_"] = val
+                            context["out"].append(val)
+                            pprint(f"@{len(context['out']) - 1}>", val)
+            except ShellsyError as e:
+                e.show()
         return context["_"]
 
     def import_subshell(self, name, as_=None):
@@ -471,11 +514,11 @@ class Shell(Command):
         try:
             plugin_shell = mod.shellsy.shellsy
         except AttributeError as e:
-            print("Module shell not found:", e)
+            print(dir(mod.shellsy), dir(mod), mod.__file__)
+            raise ShellNotFound(name + " has no shell: " + str(e)) from e
         else:
             from shellsy.lexer import for_shell
-            self.subshells[as_ or name] = plugin_shell(
-                parent=self
-            )
-            self.master._lexer = self._lexer = for_shell(shell.master)
-            return shell
+
+            self.subshells[as_ or name] = plugin_shell(parent=self)
+            self.master._lexer = plugin_shell._lexer = for_shell(self.master)
+            return plugin_shell
