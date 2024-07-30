@@ -51,6 +51,9 @@ class _WordsMeta(type):
 
         if not isinstance(items, tuple):
             items = (items,)
+        for w in items:
+            if w not in Word.words:
+                Word.add(w)
         return Union[tuple(map(Word.words.get, items))]
 
 
@@ -106,15 +109,6 @@ class Word(ShellsyCustomType, metaclass=_WordsMeta):
             if cls._instance is None:
                 cls._instance = object.__new__(cls)
             return cls._instance
-
-
-Word.add("else")
-Word.add("as")
-Word.add("and")
-Word.add("or")
-Word.add("nor")
-Word.add("from")
-Word.add("install")
 
 
 class CommandBlock(ShellsyCustomType):
@@ -175,7 +169,7 @@ class Expression(ShellsyCustomType):
     context: "Context"
     auto_evaluate = False
 
-    def __init__(self, type: str, string: str, context: Context = context):
+    def __init__(self, type: str, string: str, context: Context = context, fullstring=None):
         self.type = type
         self.string = string
         if len(string) > 1 and string[0] == "(" and string[-1] == ")":
@@ -183,9 +177,14 @@ class Expression(ShellsyCustomType):
             string = string[1:-1]
         self.context = context
         if type not in Expression.evaluators:
+            STACKTRACE.add(Stack(
+                content=type,
+                parent_text=fullstring or string,
+                parent_pos=(1, (fullstring or string).find(type)),
+                file="<expr>"
+            ))
             raise ShellsyNtaxError(
                 f"Unrecognised expression type {type!r}",
-                ("<string>", 1, 1, string, 1, len(string)),
             )
 
     def __call__(self):
@@ -225,9 +224,23 @@ class PythonEvaluator(Expression.Evaluator):
             return (exec if self.string.endswith(";") else eval)(
                 self.string, self.context, vars(__main__) | vars(shellsy.shell)
             )
+        except SyntaxError as e:
+            try:
+                file, lineno, begin, fulltext, _, le = e.args
+            except Exception:
+                _, (file, lineno, begin, fulltext, __, le) = e.args
+            finally:
+                STACKTRACE.add(
+                    Stack(
+                        content=fulltext[begin - 1:begin + le],
+                        parent_pos=(lineno, begin),
+                        parent_text=fulltext,
+                        file=file,
+                    )
+                )
+            raise ShellsyNtaxError(str(e))
         except Exception as e:
-            shellsy.shell.console.print_exception(show_locals=True)
-            raise ShellsyNtaxError(e)
+            print(e)
 
 
 class Point(tuple, ShellsyCustomType):
@@ -300,22 +313,15 @@ class ArgumentTypeMismatch(TypeError):
 
 @annotate
 def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
-    STACKTRACE.add(
-        Stack(
-            content=string,
-            parent_pos=(1, pos),
-            parent_text=full_string,
-            file="<arguments>",
-        )
-    )
     digits = set("01234567890e-E")
     decimals = digits | set(".")
     string_quotes = set("'\"")
     string_set = set(string)
     slice_set = digits | set(":")
-    point_set = digits | set(",")
+    point_set = digits | set(",.")
 
     if string == "True":
+        STACKTRACE.pop()
         return True
     elif string == "False":
         return False
@@ -336,7 +342,7 @@ def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
             STACKTRACE.add(
                 Stack(
                     content=string,
-                    parent_pos=(1, pos + len(string)),
+                    parent_pos=(1, pos + len(string) - 1),
                     parent_text=full_string or string,
                     file="<string>",
                 )
@@ -380,15 +386,26 @@ def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
             map(lambda x: float(x) if "." in x else int(x), string.split(","))
         )
     elif len(string) >= 2 and string[0] == "(" and string[-1] == ")":
-        if "#" in string and string[: (idx := string.index("#"))].isalpha():
-            return Expression(string[:idx], string[idx + 1 : -1])
-        return Expression("py", string[1:-1])
+        if "#" in string:
+            if string[1: (idx := string.index("#"))].isalpha():
+                return Expression(string[1:idx], string[idx + 1 : -1], fullstring=string)
+            elif string[2: (idx := string.index("#"))].isalpha():
+                return Expression(string[2:idx], string[idx + 1 : -1], fullstring=string)
+        return Expression("py", string[1:-1], fullstring=string)
     elif len(string) >= 2 and string[0] == "{" and string[-1] == "}":
         return CommandBlock.from_string(string[1:-1])
-    raise ShellsyNtaxError(
-        f"unrecognised literal:{string!r}",
-        STACKTRACE,
-    )
+    else:
+        STACKTRACE.add(
+            Stack(
+                content=string,
+                parent_pos=(1, pos),
+                parent_text=full_string,
+                file="<arguments>",
+            )
+        )
+        raise ShellsyNtaxError(
+            f"unrecognised literal:{string!r}",
+        )
 
 
 @dataclass
@@ -464,8 +481,8 @@ class Arguments:
                         if pos >= len(string):
                             STACKTRACE.add(
                                 Stack(
-                                    content=string[pos:],
-                                    parent_pos=(1, pos),
+                                    content=string[pos - 1:],
+                                    parent_pos=(1, pos - 1),
                                     parent_text=string,
                                     file="<string>",
                                 )
@@ -554,6 +571,10 @@ class Arguments:
 
         def is_key(string):
             return string[0] == "-" and len(string) > 1 and string[1].isalpha()
+
+        for idx, (_, ch) in string_parts[:]:
+            if ch == "#":
+                string_parts = string_parts[idx:]
 
         idx = 0
         while idx < len(string_parts):

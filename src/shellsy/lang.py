@@ -51,6 +51,9 @@ class _WordsMeta(type):
 
         if not isinstance(items, tuple):
             items = (items,)
+        for w in items:
+            if w not in Word.words:
+                Word.add(w)
         return Union[tuple(map(Word.words.get, items))]
 
 
@@ -106,15 +109,6 @@ class Word(ShellsyCustomType, metaclass=_WordsMeta):
             if cls._instance is None:
                 cls._instance = object.__new__(cls)
             return cls._instance
-
-
-Word.add("else")
-Word.add("as")
-Word.add("and")
-Word.add("or")
-Word.add("nor")
-Word.add("from")
-Word.add("install")
 
 
 class CommandBlock(ShellsyCustomType):
@@ -577,6 +571,10 @@ class Arguments:
 
         def is_key(string):
             return string[0] == "-" and len(string) > 1 and string[1].isalpha()
+
+        for idx, (_, ch) in string_parts[:]:
+            if ch == "#":
+                string_parts = string_parts[idx:]
 
         idx = 0
         while idx < len(string_parts):
