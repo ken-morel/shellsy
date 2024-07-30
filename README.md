@@ -201,9 +201,7 @@ Now we can import it, and test it!
 @2> None
 F:\shellsy\ceasar> shellsy
 > help 'ceasar.ceasar'
-╔════════════════════════════════════════════════════════════════════════════╗
-║                                   ceasar                                   ║
-╚════════════════════════════════════════════════════════════════════════════╝
+                                   ceasar
 
 (shell, text: str, offset: int | slice = slice(1, 26, None), nonletters: Nil = None)
 

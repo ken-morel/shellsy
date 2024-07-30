@@ -178,7 +178,13 @@ class Expression(ShellsyCustomType):
     context: "Context"
     auto_evaluate = False
 
-    def __init__(self, type: str, string: str, context: Context = context, fullstring=None):
+    def __init__(
+        self,
+        type: str,
+        string: str,
+        context: Context = context,
+        fullstring=None,
+    ):
         self.type = type
         self.string = string
         if len(string) > 1 and string[0] == "(" and string[-1] == ")":
@@ -186,12 +192,14 @@ class Expression(ShellsyCustomType):
             string = string[1:-1]
         self.context = context
         if type not in Expression.evaluators:
-            STACKTRACE.add(Stack(
-                content=type,
-                parent_text=fullstring or string,
-                parent_pos=(1, (fullstring or string).find(type)),
-                file="<expr>"
-            ))
+            STACKTRACE.add(
+                Stack(
+                    content=type,
+                    parent_text=fullstring or string,
+                    parent_pos=(1, (fullstring or string).find(type)),
+                    file="<expr>",
+                )
+            )
             raise ShellsyNtaxError(
                 f"Unrecognised expression type {type!r}",
             )
@@ -229,6 +237,7 @@ class PythonEvaluator(Expression.Evaluator):
     def evaluate(self):
         import __main__
         import shellsy.shell
+
         try:
             return (exec if self.string.endswith(";") else eval)(
                 self.string, self.context, vars(__main__) | vars(shellsy.shell)
@@ -241,7 +250,7 @@ class PythonEvaluator(Expression.Evaluator):
             finally:
                 STACKTRACE.add(
                     Stack(
-                        content=fulltext[begin - 1:begin + le],
+                        content=fulltext[begin - 1 : begin + le],
                         parent_pos=(lineno, begin),
                         parent_text=fulltext,
                         file=file,
@@ -391,15 +400,17 @@ def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
             STACKTRACE,
         )
     elif len(string_set - point_set) == 0:
-        return Point(
-            map(lambda x: float(x) if "." in x else int(x), string.split(","))
-        )
+        return Point(map(Decimal, string.split(",")))
     elif len(string) >= 2 and string[0] == "(" and string[-1] == ")":
         if "#" in string:
-            if string[1: (idx := string.index("#"))].isalpha():
-                return Expression(string[1:idx], string[idx + 1 : -1], fullstring=string)
-            elif string[2: (idx := string.index("#"))].isalpha():
-                return Expression(string[2:idx], string[idx + 1 : -1], fullstring=string)
+            if string[1 : (idx := string.index("#"))].isalpha():
+                return Expression(
+                    string[1:idx], string[idx + 1 : -1], fullstring=string
+                )
+            elif string[2 : (idx := string.index("#"))].isalpha():
+                return Expression(
+                    string[2:idx], string[idx + 1 : -1], fullstring=string
+                )
         return Expression("py", string[1:-1], fullstring=string)
     elif len(string) >= 2 and string[0] == "{" and string[-1] == "}":
         return CommandBlock.from_string(string[1:-1])
@@ -490,7 +501,7 @@ class Arguments:
                         if pos >= len(string):
                             STACKTRACE.add(
                                 Stack(
-                                    content=string[pos - 1:],
+                                    content=string[pos - 1 :],
                                     parent_pos=(1, pos - 1),
                                     parent_text=string,
                                     file="<string>",
