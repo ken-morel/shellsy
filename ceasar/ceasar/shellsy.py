@@ -22,7 +22,7 @@ class shellsy(Shell):  # creating the subshell!
         if isinstance(offset, slice):
             offset = choice(range(offset.start, offset.stop, offset.step or 1))
 
-        return ceasar.ceasar_text(text, offset, nonletters is None)
+        return ceasar.ceasar_text(text, offset, not (Nil - nonletters))
 
     @ceasar.dispatch  # A second function for files
     def ceasar2(
@@ -35,5 +35,5 @@ class shellsy(Shell):  # creating the subshell!
         if isinstance(offset, slice):
             offset = choice(range(offset.start, offset.stop, offset.step or 1))
         return ceasar.ceasar_file(
-            infile, outfile or infile, offset, nonletters is None
+            infile, outfile or infile, offset, not (Nil - nonletters)
         )

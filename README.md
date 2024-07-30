@@ -196,6 +196,45 @@ Successfully installed ceasar-1.0.0
 
 Now we can import it, and test it!
 
-```python
+```bash
+> import 'ceasar'
+@2> None
+F:\shellsy\ceasar> shellsy
+> help 'ceasar.ceasar'
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                   ceasar                                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
 
+(shell, text: str, offset: int | slice = slice(1, 26, None), nonletters: Nil = None)
+
+performs ceasar on text or file
+
+                            text : <class 'str'>/*
+
+THe text to perfoem ceasar on
+
+                offset : int | slice = slice(1, 26, None), /*
+
+the integer offset to apply, or a slice range to select            value from.
+@3> None
+F:\shellsy\ceasar> shellsy
+> ceasar.ceasar "hello world"
+@4> mjqqt btwqi
+F:\shellsy\ceasar> shellsy
+> ceasar.ceasar "hello world" -nonletters
+@5> tqxxa,iadxp
+F:\shellsy\ceasar> shellsy
+> ceasar.ceasar "hello world" 1 -nonletters
+@6> ifmmp!xpsme
+F:\shellsy\ceasar> shellsy
+> ceasar.ceasar "hello world" 0
+@7> hello world
+F:\shellsy\ceasar> shellsy
+> ceasar.ceasar "hello world" 5:6
+@8> mjqqt btwqi
+F:\shellsy\ceasar> shellsy
+>
 ```
+
+Gives perfectly!. well, you are set now.
+For more docs, you will have in the github wiki at https://gitub.com/ken-morel/shellsy/wiki

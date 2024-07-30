@@ -42,6 +42,15 @@ class NilType(ShellsyCustomType):
     def __bool__(self):
         return False
 
+    def __instancecheck__(self, other):
+        return other is Nil
+
+    def __sub__(self, other):
+        return other is Nil
+
+    def __rsub__(self, other):
+        return other is Nil
+
 
 class _WordsMeta(type):
     """Metaclass for creating Keyword subclasses dynamically."""
