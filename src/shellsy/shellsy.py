@@ -20,8 +20,8 @@ under certain conditions; type `show c' for details."""
     @Command
     def cd(shell, path: Path = None):
         """
-        The command utility to change directory
-        :param path: The new path to assign
+        The command to change working directory
+        :param path: The path to the new working directory
 
         :returns: The new working directory
         """
@@ -46,6 +46,9 @@ under certain conditions; type `show c' for details."""
             os.makedirs(path)
         except Exception as e:
             print(e)
+            return Nil
+        else:
+            return path
 
     @Command
     def echo(shell, val):
@@ -174,33 +177,62 @@ under certain conditions; type `show c' for details."""
         return ret
 
     class config(Shell):
-        @Command
-        def set(shell, name: str, val: Any):
-            set_setting(name, val)
-            return get_setting(name)
+        def __entrypoint__(shell, name: str, val: Any = None):
+            """\
+            config edit configuration settings.
 
-        @Command
-        def get(shell, name: str):
+            :param name: The name of the setting to get or set
+            :param val: The optional value to assign.
+
+            :returns: THe value of setting 'name'
+            """
+            if val is not None:
+                set_setting(name, val)
             return get_setting(name)
 
     class status(Shell):
         @Command
         def __entrypoint__(shell):
+            """\
+            status command prints all the currently showing status messages
+
+            :returns: None
+            """
             for x in StatusText.showing:
                 pprint(x)
             return None
 
         @Command
-        def add(shell, text: str, dur: int = 5000):
-            return StatusText(text, dur)
+        def add(shell, text: str, dur: int = 5000, source: str = "shell"):
+            """
+            Creates a new status message in status bar
+
+            :param text: The status text
+            :param dur: the status text duration.
+            :param source: THe source the status will be attributed.
+            Another status of the same source will be overridden if exists.
+
+            :returns: THe status text object
+            """
+            return StatusText(text, dur, source=source)
 
         @Command
         def clear(shell):
+            """
+            Clears all the shown status messages
+
+            :returns: None
+            """
             return StatusText.clear()
 
     class plugin(Shell):
         @Command
         def list(shell):
+            """\
+            List all available plugins in plugin directory.
+
+            :returns: THe list of plugin names
+            """
             from shellsy.plugin import Plugin
 
             txt = ""
@@ -258,26 +290,18 @@ under certain conditions; type `show c' for details."""
             )
 
         @Command
-        def install(shell):
+        def install(shell, path: Path | str = "."):
+            """
+            Installs the plugin in the current working directory or from
+            specified path or pypi package name
+
+            :param path: The optional package name or location
+            """
             import os
             from shellsy.settings import plugin_dir
 
             os.system(
-                'pip install . --target "' + str(plugin_dir) + '" --upgrade'
-            )
-
-        @install.dispatch
-        def install_from(shell, location: Path | str):
-            import os
-            from shellsy.settings import plugin_dir
-
-            os.system(
-                "pip install "
-                + str(location)
-                + ' --target "'
-                + str(plugin_dir)
-                + '" '
-                + "--upgrade"
+                f'pip install {path} --target "{plugin_dir}" --upgrade'
             )
 
     @Command
