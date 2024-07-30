@@ -63,7 +63,7 @@ class CommandCall:
             STACKTRACE.add(
                 Stack(
                     content=args,
-                    parent_pos=(1, pos),
+                    parent_pos=(1, pos + 1),
                     parent_text=string,
                     file="<call>",
                 )

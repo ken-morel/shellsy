@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pyoload import *
-from typing import Optional, List
+from typing import Optional
 import comberload
 
 
@@ -61,7 +61,7 @@ class Stack:
 @annotate
 class StackTrace:
     """Maintains a list of Stack instances for error reporting."""
-    stacks: List[Stack]
+    stacks: list[Stack]
 
     def __init__(self):
         self.stacks = []

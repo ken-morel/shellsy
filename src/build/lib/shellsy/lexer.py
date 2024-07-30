@@ -1,5 +1,5 @@
 import comberload
-
+LEXER = None
 
 @comberload("prompt_toolkit.lexers", "pygments.lexer", "pygments.token")
 def for_shell(shell):
@@ -866,5 +866,4 @@ def for_shell(shell):
             },
         },
     )
-
     return PygmentsLexer(CustomLerLexer)
