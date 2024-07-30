@@ -572,7 +572,7 @@ class Arguments:
         def is_key(string):
             return string[0] == "-" and len(string) > 1 and string[1].isalpha()
 
-        for idx, (_, ch) in string_parts[:]:
+        for idx, (_, ch) in enumerate(string_parts[:]):
             if ch == "#":
                 string_parts = string_parts[idx:]
 

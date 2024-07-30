@@ -42,6 +42,15 @@ class NilType(ShellsyCustomType):
     def __bool__(self):
         return False
 
+    def __instancecheck__(self, other):
+        return other is Nil
+
+    def __sub__(self, other):
+        return other is Nil
+
+    def __rsub__(self, other):
+        return other is Nil
+
 
 class _WordsMeta(type):
     """Metaclass for creating Keyword subclasses dynamically."""
@@ -572,7 +581,7 @@ class Arguments:
         def is_key(string):
             return string[0] == "-" and len(string) > 1 and string[1].isalpha()
 
-        for idx, (_, ch) in string_parts[:]:
+        for idx, (_, ch) in enumerate(string_parts[:]):
             if ch == "#":
                 string_parts = string_parts[idx:]
 
