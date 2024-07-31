@@ -12,6 +12,8 @@ import time
 from inspect import Signature
 import logging
 from rich.logging import RichHandler
+from rich import print as pprint
+from rich.markdown import Markdown
 
 FORMAT = "%(message)s"
 
@@ -20,23 +22,6 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("rich")
-
-CONSOLE = None
-
-
-@comberload("rich.console")
-def pprint(*args, **kw):
-    global CONSOLE
-    from rich.console import Console
-
-    if CONSOLE is None:
-        CONSOLE = Console()
-    CONSOLE.print(*args, **kw)
-
-
-@pprint.failback
-def pprint_failback(*args, **kw):
-    print(*args, **kw)
 
 
 @annotate
@@ -116,7 +101,7 @@ class Command:
             else:
                 raise NoSuchCommand(
                     "No dispatch matches arguments\n"
-                    + "\n -".join(map(str, errors))
+                    + "\n - ".join(map(str, errors))
                 )
 
     def __set_name__(self, cls, name):
@@ -469,22 +454,24 @@ class Shell(Command):
 
     def cmdloop(self):
         try:
-            print(self.intro)
+            intro = self.intro
         except AttributeError:
             pass
+        else:
+            pprint(Markdown(intro))
         self.should_run = True
         while self.should_run:
             STACKTRACE.clear()
             try:
                 text = self.get_input()
-                STACKTRACE.add(
-                    Stack(
-                        content=text or "",
-                        parent_pos=(1, 0),
-                        parent_text=None,
-                        file="<cmd>",
-                    )
-                )
+                # STACKTRACE.add(
+                #     Stack(
+                #         content=text or "",
+                #         parent_pos=(1, 0),
+                #         parent_text=None,
+                #         file="<cmd>",
+                #     )
+                # )
                 if text is None:
                     break
                 elif len(text) == 0 or text[0] == "#":
@@ -532,6 +519,7 @@ class Shell(Command):
 
     def import_subshell(self, name, as_=None):
         from importlib import import_module
+
         mod = import_module(name + ".shellsy")
         try:
             plugin_shell = mod.shellsy

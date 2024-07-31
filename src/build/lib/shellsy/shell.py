@@ -10,24 +10,18 @@ from .settings import *
 from .help import CommandHelp
 import time
 from inspect import Signature
+import logging
+from rich.logging import RichHandler
+from rich import print as pprint
+from rich.markdown import Markdown
 
+FORMAT = "%(message)s"
 
-CONSOLE = None
+logging.basicConfig(
+    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
 
-
-@comberload("rich.console")
-def pprint(*args, **kw):
-    global CONSOLE
-    from rich.console import Console
-
-    if CONSOLE is None:
-        CONSOLE = Console()
-    CONSOLE.print(*args, **kw)
-
-
-@pprint.failback
-def pprint_failback(*args, **kw):
-    print(*args, **kw)
+log = logging.getLogger("rich")
 
 
 @annotate
@@ -460,9 +454,11 @@ class Shell(Command):
 
     def cmdloop(self):
         try:
-            print(self.intro)
+            intro = self.intro
         except AttributeError:
             pass
+        else:
+            pprint(Markdown(intro))
         self.should_run = True
         while self.should_run:
             STACKTRACE.clear()

@@ -35,6 +35,7 @@ class CommandCall:
                 args = Variable(varname.strip()), evaluate_literal(val)
             elif ":" in string:
                 from .shell import Shell
+
                 varname, val = string[1:].split(":", 1)
                 val = val.strip()
                 argmaps.append((1, varname))
@@ -111,6 +112,9 @@ class CommandParameter:
         mode = ("/", "/*", "*")[self.mode]
         return f"{self.name}: {self.type} = {self.default}, {mode}"
 
+    def __hash__(self):
+        return hash(self.name)
+
 
 class CommandParameters:
     def __init__(self, params):
@@ -136,17 +140,66 @@ class CommandParameters:
                 file=f"<arguments>",
             )
         )
-        for idx, param in enumerate(self.params):
-            if param.name in args.kwargs:
-                kwargs[param] = (
-                    args.kwmaps[param.name],
-                    args.kwargs[param.name],
+        for idx, (val, (pos, raw)) in enumerate(zip(args.args, args.argmaps)):
+            STACKTRACE.add(
+                Stack(
+                    content=raw,
+                    parent_pos=(1, pos),
+                    parent_text=args.full_string,
+                    file=f"<argument>",
                 )
-            elif len(args.args) > idx:
-                kwargs[param] = (args.argmaps[idx], args.args[idx])
-            elif param.default is not _empty:
-                kwargs[param] = ((1, ""), param.default)
+            )
+            if idx >= len(self.params):
+                if should_dispatch:
+                    raise ShouldDispath(
+                        ArgumentError(
+                            f"Extra positional argument",
+                        )
+                    )
+                else:
+                    raise ArgumentError(
+                        f"Extra positional argument",
+                    )
+            param = self.params[idx]
+            kwargs[param] = ((pos, raw), val)
+            STACKTRACE.pop()
+
+        for (key, val), (pos, raw) in zip(
+            args.kwargs.items(), args.kwmaps.values()
+        ):
+            STACKTRACE.add(
+                Stack(
+                    content=raw,
+                    parent_pos=(1, pos),
+                    parent_text=args.full_string,
+                    file=f"<argument>",
+                )
+            )
+            for x in self.params:
+                if x.name == key:
+                    param = x
+                    break
             else:
+                if should_dispatch:
+                    raise ShouldDispath(
+                        ArgumentError(
+                            f"Extra keyword argument",
+                        )
+                    )
+                else:
+                    raise ArgumentError(
+                        f"Extra keyword argument",
+                    )
+            if param in kwargs:
+                raise ArgumentError(
+                    f"Keyword argument: {param} received. but was already "
+                    "set (surely in positional parameters)",
+                )
+            kwargs[param] = ((pos, raw), val)
+            STACKTRACE.pop()
+
+        for idx, param in enumerate(self.params):
+            if param not in kwargs:
                 if should_dispatch:
                     raise ShouldDispath(
                         ArgumentError(
@@ -157,6 +210,7 @@ class CommandParameters:
                     raise ArgumentError(
                         f"missing argument for {param}", STACKTRACE
                     )
+
         final_args = {}
         for param, ((pos, text), val) in kwargs.items():
             STACKTRACE.add(
@@ -196,9 +250,10 @@ class CommandParameters:
                 or val.auto_evaluate
             ):
                 val = val.evaluate()
-            if param.type not in (_empty, Any) and not type_match(
-                val, param.type
-            )[0]:
+            if (
+                param.type not in (_empty, Any)
+                and not type_match(val, param.type)[0]
+            ):
                 idx = -1
                 if val in args.args:
                     idx = args.args.index(val)

@@ -12,10 +12,10 @@ class Shellsy(Shell):
     Welcome, to shellsy, here you will build simple tools
     """
 
-    intro = """shellsy  Copyright (C) 2024  ken-morel
-This program comes with ABSOLUTELY NO WARRANTY; for details type `w_'.
+    intro = """shellsy  Copyright (C) 2024 ken-morel
+This program comes with ABSOLUTELY NO WARRANTY; for details type `w_`.
 This is free software, and you are welcome to redistribute it
-under certain conditions; type `c_' for details."""
+under certain conditions; type `c_` for details."""
 
     @Command
     def cd(shell, path: Path = None):
@@ -165,7 +165,7 @@ under certain conditions; type `c_' for details."""
         condition remains True. It serves as the criteria for determining the
         loop's continuation
 
-        :param command_block: The command_block parameter represents the block
+        :param then: The command_block parameter represents the block
         of commands that will be executed repeatedly as part of the 'while'
         loop. This block contains the actions or logic that should be performed
         iteratively until the condition evaluates to False. It encapsulates the
@@ -336,8 +336,9 @@ under certain conditions; type `c_' for details."""
 
     @_import.dispatch
     def _import_as(shell, location: str, _: Word["as"], name: str):
+        print("importing" location, "as", name)
         try:
-            shell.import_subshell(location, name)
+            shell.import_subshell(location, as_=name)
         except (ImportError, ModuleNotFoundError) as e:
             print(e)
 

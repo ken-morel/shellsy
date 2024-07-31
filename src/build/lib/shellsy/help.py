@@ -88,9 +88,9 @@ class CommandHelp:
         text += f"```python\n{self.command.signature}\n```\n"
         text += self.help + "\n\n"
         for phelp in self.param_help:
-            text += f"##### **{phelp.name}**"
+            text += f"## ***{phelp.name}***"
             if phelp.type is not _empty:
-                text += f" : *{phelp.type}*"
+                text += f" : `{phelp.type}`"
             if phelp.default is not _empty:
                 text += f" = `{phelp.default}`, "
             text += "`" + ("/", "/*", "*")[phelp.mode] + "`"
@@ -98,4 +98,5 @@ class CommandHelp:
             for ln in phelp.help.splitlines():
                 text += "    " + ln
             text += "\n\n"
+        text += "\n## Returns\n\n" + "return_help"
         return Markdown(text)

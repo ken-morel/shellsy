@@ -147,7 +147,6 @@ class CommandBlock(ShellsyCustomType):
         )
         if auto_evaluate:
             string = string[1:-1]
-        print(auto_evaluate)
         lines = []
         pos = 0
         while pos < len(string):  # collect each line
@@ -497,7 +496,6 @@ class Arguments:
                             )
                             raise ShellsyNtaxError(
                                 f"Escaped nothing at end of string:{string!r}",
-                                STACKTRACE,
                             )
                         elif string[pos + 1] in ("'\"\\"):
                             text += string[pos + 1]

@@ -196,9 +196,9 @@ class CommandParameters:
                 or val.auto_evaluate
             ):
                 val = val.evaluate()
-            if param.type not in (_empty, Any) and not isinstance(
+            if param.type not in (_empty, Any) and not type_match(
                 val, param.type
-            ):
+            )[0]:
                 idx = -1
                 if val in args.args:
                     idx = args.args.index(val)

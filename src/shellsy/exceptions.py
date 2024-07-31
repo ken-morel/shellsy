@@ -13,7 +13,7 @@ class Stack:
     parent_text: Optional[str]
     file: str
 
-    @comberload("prompt_toolkit", "pygments")
+    # @comberload("prompt_toolkit", "pygments")
     def show(self):
         from .shell import Shell
         from prompt_toolkit import print_formatted_text, HTML
@@ -44,15 +44,6 @@ class Stack:
         except AttributeError as e:
             print(self.parent_text)
 
-        print(" " * self.parent_pos[1] + "^" * len(self.content))
-
-    @show.failback
-    def show2(self):
-        """Fallback error message display."""
-        print(
-            f"File: {self.file}, line {self.parent_pos[0]}, column {self.parent_pos[1]}"
-        )
-        print(self.parent_text or self.content)
         print(" " * self.parent_pos[1] + "^" * len(self.content))
 
 
