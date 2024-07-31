@@ -251,7 +251,7 @@ class PythonEvaluator(Expression.Evaluator):
                 STACKTRACE.add(
                     Stack(
                         content=fulltext[begin - 1 : begin + le],
-                        parent_pos=(lineno, begin),
+                        parent_pos=(lineno, begin - 1),
                         parent_text=fulltext,
                         file=file,
                     )
