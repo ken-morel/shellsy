@@ -13,9 +13,9 @@ class Shellsy(Shell):
     """
 
     intro = """shellsy  Copyright (C) 2024  ken-morel
-This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This program comes with ABSOLUTELY NO WARRANTY; for details type `w_'.
 This is free software, and you are welcome to redistribute it
-under certain conditions; type `show c' for details."""
+under certain conditions; type `c_' for details."""
 
     @Command
     def cd(shell, path: Path = None):
@@ -365,3 +365,60 @@ under certain conditions; type `show c' for details."""
     @Command
     def exit(shell):
         shell.should_run = False
+
+    @Command
+    def w_(shell):
+        """Shellsy waranty"""
+        from rich.markdown import Markdown
+        from rich import print
+        print(Markdown("""# Warranty Disclaimer
+
+This program is distributed in the hope that it will be useful,
+but **WITHOUT ANY WARRANTY**; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+For more details, refer to the [GNU General Public License]
+(https://www.gnu.org/licenses/gpl-3.0.html).
+
+## Important Notes:
+- You are advised to test the program extensively before using it in any
+critical applications.
+- The authors and contributors of this software are not responsible for any
+damages that may occur through its use.
+- If you encounter any issues, please consider reporting them to the respective
+maintainers for potential improvements.
+
+Thank you for using our software!"""))
+
+    @Command
+    def c_(shell):
+        """Shellsy waranty"""
+        from rich.markdown import Markdown
+        from rich import print
+        print(Markdown("""# License Information
+
+This program is licensed under the **GNU General Public License (GPL)**.
+
+## Key Points of the License:
+
+- **Freedom to Use**: You are free to use this software for any purpose.
+- **Access to Source Code**: You can view, modify, and distribute the source
+  code.
+- **Distribution**: When redistributing the software, you must provide the
+  same license terms to others. This ensures that everyone can benefit from the
+  freedoms granted by this license.
+
+## Disclaimer:
+- This software is provided "as is", without any warranty of any kind, express
+  or implied.
+- For more details, please read the full text of the
+  [GNU General Public License]
+  (https://www.gnu.org/licenses/gpl-3.0.html).
+
+## Additional Information:
+- If you modify this program and distribute it, you must include a copy of
+  this license.
+- Please contribute your improvements back to the community when possible.
+
+Thank you for choosing our software and supporting open-source development!
+"""))
