@@ -10,7 +10,16 @@ from .settings import *
 from .help import CommandHelp
 import time
 from inspect import Signature
+import logging
+from rich.logging import RichHandler
 
+FORMAT = "%(message)s"
+
+logging.basicConfig(
+    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
+
+log = logging.getLogger("rich")
 
 CONSOLE = None
 
