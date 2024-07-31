@@ -13,15 +13,15 @@ class Shellsy(Shell):
     """
 
     intro = """shellsy  Copyright (C) 2024  ken-morel
-This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This program comes with ABSOLUTELY NO WARRANTY; for details type `w_'.
 This is free software, and you are welcome to redistribute it
-under certain conditions; type `show c' for details."""
+under certain conditions; type `c_' for details."""
 
     @Command
     def cd(shell, path: Path = None):
         """
-        The command utility to change directory
-        :param path: The new path to assign
+        The command to change working directory
+        :param path: The path to the new working directory
 
         :returns: The new working directory
         """
@@ -46,6 +46,26 @@ under certain conditions; type `show c' for details."""
             os.makedirs(path)
         except Exception as e:
             print(e)
+            return Nil
+        else:
+            return path
+
+    @Command
+    def dir(shell, pattern: str | Path = "*"):
+        """
+        The command utility to change directory
+        :param path: The new path to assign
+
+        :returns: The new working directory
+        """
+        from rich.markdown import Markdown
+        from rich import print
+
+        txt = ""
+        for x in Path(".").resolve().glob(str(pattern)):
+            txt += f"- {txt}\n"
+        print(Markdown(txt))
+        return tuple(Path(".").resolve().glob(str(pattern)))
 
     @Command
     def echo(shell, val):
@@ -174,33 +194,62 @@ under certain conditions; type `show c' for details."""
         return ret
 
     class config(Shell):
-        @Command
-        def set(shell, name: str, val: Any):
-            set_setting(name, val)
-            return get_setting(name)
+        def __entrypoint__(shell, name: str, val: Any = None):
+            """\
+            config edit configuration settings.
 
-        @Command
-        def get(shell, name: str):
+            :param name: The name of the setting to get or set
+            :param val: The optional value to assign.
+
+            :returns: THe value of setting 'name'
+            """
+            if val is not None:
+                set_setting(name, val)
             return get_setting(name)
 
     class status(Shell):
         @Command
         def __entrypoint__(shell):
+            """\
+            status command prints all the currently showing status messages
+
+            :returns: None
+            """
             for x in StatusText.showing:
                 pprint(x)
             return None
 
         @Command
-        def add(shell, text: str, dur: int = 5000):
-            return StatusText(text, dur)
+        def add(shell, text: str, dur: int = 5000, source: str = "shell"):
+            """
+            Creates a new status message in status bar
+
+            :param text: The status text
+            :param dur: the status text duration.
+            :param source: THe source the status will be attributed.
+            Another status of the same source will be overridden if exists.
+
+            :returns: THe status text object
+            """
+            return StatusText(text, dur, source=source)
 
         @Command
         def clear(shell):
+            """
+            Clears all the shown status messages
+
+            :returns: None
+            """
             return StatusText.clear()
 
     class plugin(Shell):
         @Command
         def list(shell):
+            """\
+            List all available plugins in plugin directory.
+
+            :returns: THe list of plugin names
+            """
             from shellsy.plugin import Plugin
 
             txt = ""
@@ -258,26 +307,18 @@ under certain conditions; type `show c' for details."""
             )
 
         @Command
-        def install(shell):
+        def install(shell, path: Path | str = "."):
+            """
+            Installs the plugin in the current working directory or from
+            specified path or pypi package name
+
+            :param path: The optional package name or location
+            """
             import os
             from shellsy.settings import plugin_dir
 
             os.system(
-                'pip install . --target "' + str(plugin_dir) + '" --upgrade'
-            )
-
-        @install.dispatch
-        def install_from(shell, location: Path | str):
-            import os
-            from shellsy.settings import plugin_dir
-
-            os.system(
-                "pip install "
-                + str(location)
-                + ' --target "'
-                + str(plugin_dir)
-                + '" '
-                + "--upgrade"
+                f'pip install {path} --target "{plugin_dir}" --upgrade'
             )
 
     @Command
@@ -341,3 +382,60 @@ under certain conditions; type `show c' for details."""
     @Command
     def exit(shell):
         shell.should_run = False
+
+    @Command
+    def w_(shell):
+        """Shellsy waranty"""
+        from rich.markdown import Markdown
+        from rich import print
+        print(Markdown("""# Warranty Disclaimer
+
+This program is distributed in the hope that it will be useful,
+but **WITHOUT ANY WARRANTY**; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+For more details, refer to the [GNU General Public License]
+(https://www.gnu.org/licenses/gpl-3.0.html).
+
+## Important Notes:
+- You are advised to test the program extensively before using it in any
+critical applications.
+- The authors and contributors of this software are not responsible for any
+damages that may occur through its use.
+- If you encounter any issues, please consider reporting them to the respective
+maintainers for potential improvements.
+
+Thank you for using our software!"""))
+
+    @Command
+    def c_(shell):
+        """Shellsy waranty"""
+        from rich.markdown import Markdown
+        from rich import print
+        print(Markdown("""# License Information
+
+This program is licensed under the **GNU General Public License (GPL)**.
+
+## Key Points of the License:
+
+- **Freedom to Use**: You are free to use this software for any purpose.
+- **Access to Source Code**: You can view, modify, and distribute the source
+  code.
+- **Distribution**: When redistributing the software, you must provide the
+  same license terms to others. This ensures that everyone can benefit from the
+  freedoms granted by this license.
+
+## Disclaimer:
+- This software is provided "as is", without any warranty of any kind, express
+  or implied.
+- For more details, please read the full text of the
+  [GNU General Public License]
+  (https://www.gnu.org/licenses/gpl-3.0.html).
+
+## Additional Information:
+- If you modify this program and distribute it, you must include a copy of
+  this license.
+- Please contribute your improvements back to the community when possible.
+
+Thank you for choosing our software and supporting open-source development!
+"""))

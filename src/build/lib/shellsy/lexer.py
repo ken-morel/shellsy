@@ -1,5 +1,7 @@
 import comberload
+
 LEXER = None
+
 
 @comberload("prompt_toolkit.lexers", "pygments.lexer", "pygments.token")
 def for_shell(shell):
@@ -96,11 +98,28 @@ def for_shell(shell):
         tokens = {
             "root": [
                 (r"!", Punctuation, "bash"),
-                (r"^\s*#.+", Comment.Single),
+                (r"#.+", Comment.Single),
                 include("shellsy-statement"),
             ],
-            "bash": [
-                include("shellsy-statement"),
+            "single-string": [
+                include('string-escapes'),
+                ("'", Punctuation, "#pop"),
+                (r".", String.Single),
+            ],
+            "double-string": [
+                include('string-escapes'),
+                (r'"', Punctuation, "#pop"),
+                (r".", String.Double),
+            ],
+            "string-escapes": [
+                (
+                    r"\\(N\{.*?\}|u[a-fA-F0-9]{4}|U[a-fA-F0-9]{8})",
+                    String.Escape,
+                ),
+                (
+                    r'\\([\\abfnrtv"\']|\n|x[a-fA-F0-9]{2}|[0-7]{1,3})',
+                    String.Escape,
+                )
             ],
             "pathcontent": [
                 (r"\w\:", Name.Namespace),
@@ -121,6 +140,85 @@ def for_shell(shell):
                 (r"\}", Punctuation, "#pop"),
                 (r";", Punctuation),
                 include("shellsy-statement"),
+            ],
+
+            'bash': [
+                include('bash-basic'),
+                (r'`', String.Backtick, 'bash-backticks'),
+                include('bash-data'),
+                include('bash-interp'),
+            ],
+            'bash-interp': [
+                (r'\$\(\(', Keyword, 'bash-math'),
+                (r'\$\(', Keyword, 'bash-paren'),
+                (r'\$\{#?', String.Interpol, 'bash-curly'),
+                (r'\$[a-zA-Z_]\w*', Name.Variable),  # user variable
+                (r'\$(?:\d+|[#$?!_*@-])', Name.Variable),      # builtin
+                (r'\$', Text),
+            ],
+            'bash-basic': [
+                (r'\b(if|fi|else|while|in|do|done|for|then|return|function|case|'
+                 r'select|break|continue|until|esac|elif)(\s*)\b',
+                 bygroups(Keyword, Whitespace)),
+                (r'\b(alias|bg|bind|builtin|caller|cd|command|compgen|'
+                 r'complete|declare|dirs|disown|echo|enable|eval|exec|exit|'
+                 r'export|false|fc|fg|getopts|hash|help|history|jobs|kill|let|'
+                 r'local|logout|popd|printf|pushd|pwd|read|readonly|set|shift|'
+                 r'shopt|source|suspend|test|time|times|trap|true|type|typeset|'
+                 r'ulimit|umask|unalias|unset|wait)(?=[\s)`])',
+                 Name.Builtin),
+                (r'\A#!.+\n', Comment.Hashbang),
+                (r'#.*\n', Comment.Single),
+                (r'\\[\w\W]', String.Escape),
+                (r'(\b\w+)(\s*)(\+?=)', bygroups(Name.Variable, Whitespace, Operator)),
+                (r'[\[\]{}()=]', Operator),
+                (r'<<<', Operator),  # here-string
+                (r'<<-?\s*(\'?)\\?(\w+)[\w\W]+?\2', String),
+                (r'&&|\|\|', Operator),
+            ],
+            'bash-data': [
+                (r'(?s)\$?"(\\.|[^"\\$])*"', String.Double),
+                (r'"', String.Double, 'bash-string'),
+                (r"(?s)\$'(\\\\|\\[0-7]+|\\.|[^'\\])*'", String.Single),
+                (r"(?s)'.*?'", String.Single),
+                (r';', Punctuation),
+                (r'&', Punctuation),
+                (r'\|', Punctuation),
+                (r'\s+', Whitespace),
+                (r'\d+\b', Number),
+                (r'[^=\s\[\]{}()$"\'`\\<&|;]+', Text),
+                (r'<', Text),
+            ],
+            'bash-string': [
+                (r'"', String.Double, '#pop'),
+                (r'(?s)(\\\\|\\[0-7]+|\\.|[^"\\$])+', String.Double),
+                include('bash-interp'),
+            ],
+            'bash-curly': [
+                (r'\}', String.Interpol, '#pop'),
+                (r':-', Keyword),
+                (r'\w+', Name.Variable),
+                (r'[^}:"\'`$\\]+', Punctuation),
+                (r':', Punctuation),
+                include('bash'),
+            ],
+            'bash-paren': [
+                (r'\)', Keyword, '#pop'),
+                include('bash'),
+            ],
+            'bash-math': [
+                (r'\)\)', Keyword, '#pop'),
+                (r'\*\*|\|\||<<|>>|[-+*/%^|&<>]', Operator),
+                (r'\d+#[\da-zA-Z]+', Number),
+                (r'\d+#(?! )', Number),
+                (r'0[xX][\da-fA-F]+', Number),
+                (r'\d+', Number),
+                (r'[a-zA-Z_]\w*', Name.Variable),  # user variable
+                include('bash'),
+            ],
+            'bash-backticks': [
+                (r'`', String.Backtick, '#pop'),
+                include('bash'),
             ],
             "python-expression": [
                 # (r'[^\(]+', Punctuation),
@@ -814,10 +912,8 @@ def for_shell(shell):
                         r"(')([^']*)(')",
                         bygroups(Punctuation, String.Single, Punctuation),
                     ),
-                    (
-                        r'(")([^"]*)(")',
-                        bygroups(Punctuation, String.Double, Punctuation),
-                    ),
+                    (r'"', Punctuation, "double-string"),
+                    (r"'", Punctuation, "single-string"),
                     (
                         r"(-?[\d.]+)(\:)(-?[\d.]+)(\:)(-?[\d.]+)",
                         bygroups(
@@ -861,9 +957,11 @@ def for_shell(shell):
                 ],
                 "shellsy-array": [
                     (r"\]", Punctuation, "#pop"),
-                    include('shellsy-arguments'),
+                    include("shellsy-arguments"),
                 ],
             },
         },
     )
-    return PygmentsLexer(CustomLerLexer)
+    lexer = PygmentsLexer(CustomLerLexer)
+    lexer.raw = CustomLerLexer
+    return lexer

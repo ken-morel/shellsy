@@ -962,4 +962,6 @@ def for_shell(shell):
             },
         },
     )
-    return PygmentsLexer(CustomLerLexer)
+    lexer = PygmentsLexer(CustomLerLexer)
+    lexer.raw = CustomLerLexer
+    return lexer

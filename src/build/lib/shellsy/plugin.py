@@ -35,35 +35,14 @@ def initialize_plugin(
         f"""\
 import {name}
 from pathlib import Path
-
-from setuptools import find_packages
 from setuptools import setup
-from setuptools.command.install import install
-from shellsy import __version__ as version
-import os
 
 project_dir = Path(__file__).parent
-
-
-class ShellsyInstallCommand(install):
-    def run(self):
-        import shellsy.settings
-
-        shellsy.settings.init()
-        super().run()
-
 
 try:
     long_description = (project_dir / "README.md").read_text()
 except FileNotFoundError:
-    try:
-        long_description = Path("README.md").read_text()
-    except FileNotFoundError:
-        try:
-            long_description = Path("/src/README.md").read_text()
-        except FileNotFoundError:
-            long_description = (project_dir.parent / "README.md").read_text()
-
+    long_description = Path("README.md").read_text()
 
 setup(
     name={name!r},

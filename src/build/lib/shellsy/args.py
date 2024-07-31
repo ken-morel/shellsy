@@ -27,12 +27,19 @@ class CommandCall:
     def from_string(cls, string: str):
         argmaps = []
         if len(string) > 0 and string[0] == "$":
-            if ":" in string:
+            if "=" in string:
+                varname, val = string[1:].split("=", 1)
+                val = val.strip()
+                argmaps.append((1, varname))
+                argmaps.append((len(string) - len(val), val))
+                args = Variable(varname.strip()), evaluate_literal(val)
+            elif ":" in string:
+                from .shell import Shell
                 varname, val = string[1:].split(":", 1)
                 val = val.strip()
                 argmaps.append((1, varname))
                 argmaps.append((len(string) - len(val), val))
-                args = Variable(varname.strip()), evaluate_literal(val.strip())
+                args = Variable(varname.strip()), Shell.master(val)
             else:
                 argmaps.append((1, string[1:].strip()))
                 args = (Variable(string[1:].strip()),)

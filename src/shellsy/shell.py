@@ -522,11 +522,11 @@ class Shell(Command):
         return context["_"]
 
     def import_subshell(self, name, as_=None):
-        mod = __import__(name + ".shellsy")
+        from importlib import import_module
+        mod = import_module(name + ".shellsy")
         try:
-            plugin_shell = mod.shellsy.shellsy
+            plugin_shell = mod.shellsy
         except AttributeError as e:
-            print(dir(mod.shellsy), dir(mod), mod.__file__)
             raise ShellNotFound(name + " has no shell: " + str(e)) from e
         else:
             from shellsy.lexer import for_shell

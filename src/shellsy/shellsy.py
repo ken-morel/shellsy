@@ -51,6 +51,23 @@ under certain conditions; type `c_' for details."""
             return path
 
     @Command
+    def dir(shell, pattern: str | Path = "*"):
+        """
+        The command utility to change directory
+        :param path: The new path to assign
+
+        :returns: The new working directory
+        """
+        from rich.markdown import Markdown
+        from rich import print
+
+        txt = ""
+        for x in Path(".").resolve().glob(str(pattern)):
+            txt += f"- {txt}\n"
+        print(Markdown(txt))
+        return tuple(Path(".").resolve().glob(str(pattern)))
+
+    @Command
     def echo(shell, val):
         """
         Reproduces a value val

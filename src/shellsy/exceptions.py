@@ -13,7 +13,6 @@ class Stack:
     parent_text: Optional[str]
     file: str
 
-    @unannotable
     @comberload("prompt_toolkit", "pygments")
     def show(self):
         from .shell import Shell
@@ -38,7 +37,7 @@ class Stack:
             print_formatted_text(
                 PygmentsTokens(
                     list(
-                        pygments.lex(self.parent_text, lexer=Shell.master.lexer().pygments_lexer)
+                        pygments.lex(self.parent_text, lexer=Shell.master.lexer().raw())
                     )
                 )
             )
@@ -47,7 +46,6 @@ class Stack:
 
         print(" " * self.parent_pos[1] + "^" * len(self.content))
 
-    @unannotable
     @show.failback
     def show2(self):
         """Fallback error message display."""

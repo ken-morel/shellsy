@@ -32,7 +32,7 @@ def pprint_failback(*args, **kw):
 
 @annotate
 class StatusText:
-    __slots__ = ["text", "duration", "source"]
+    __slots__ = ("text", "duration", "source", "begin")
     to_show = []
     shown = []
     showing = []
@@ -51,6 +51,23 @@ class StatusText:
     def clear(cls):
         cls.shown.extend(cls.showing)
         cls.showing.clear()
+
+    @classmethod
+    def update(cls):
+        for idx, stat in reversed(tuple(enumerate(cls.showing[:]))):
+            if (time.perf_counter() - stat.begin) > stat.duration:
+                cls.showing.pop(idx)
+                cls.shown.append(stat)
+                cls.shown = cls.shown[-cls.cache_size :]
+            for ostat in cls.to_show:
+                if ostat.source == stat.source:
+                    cls.showing.pop(idx)
+                    cls.shown.append(stat)
+                    cls.shown = cls.shown[-cls.cache_size :]
+        for stat in cls.to_show:
+            stat.begin = time.perf_counter()
+            cls.showing.append(stat)
+        cls.to_show.clear()
 
 
 @annotate
@@ -305,7 +322,11 @@ class Shell(Command):
                     for v in context:
                         v = "$" + v
                         comps.append((similarity(line[1:], v), v))
-                    StatusText(repr(context.get(line[1:])), 5)
+                    StatusText(
+                        repr(context.get(line[1:])),
+                        5,
+                        source="__entry-var-values__",
+                    )
                     comps.sort(key=lambda k: -k[0])
                     for _, x in comps:
                         yield Completion(x, start_position=-len(line))
@@ -376,23 +397,14 @@ class Shell(Command):
         return possible
 
     def bottom_toolbar(self):
-        for idx, stat in reversed(tuple(enumerate(StatusText.showing[:]))):
-            if (time.perf_counter() - stat.begin) > stat.duration:
-                StatusText.showing.pop(idx)
-                StatusText.shown.append(stat)
-                StatusText.shown = StatusText.shown[-StatusText.cache_size :]
-            for ostat in StatusText.to_show:
-                if ostat.source == stat.source:
-                    StatusText.showing.pop(idx)
-                    StatusText.shown.append(stat)
-                    StatusText.shown = StatusText.shown[
-                        -StatusText.cache_size :
-                    ]
-        for stat in StatusText.to_show:
-            stat.begin = time.perf_counter()
-            StatusText.showing.append(stat)
-        StatusText.to_show.clear()
-        return ";".join([x.text for x in StatusText.showing])
+        try:
+            StatusText.update()
+        except Exception as e:
+            return (
+                str(e) + ";" + ";".join([x.text for x in StatusText.showing])
+            )
+        else:
+            return ";".join([x.text for x in StatusText.showing])
 
     def right_prompt(self):
         return ""
@@ -510,11 +522,11 @@ class Shell(Command):
         return context["_"]
 
     def import_subshell(self, name, as_=None):
-        mod = __import__(name + ".shellsy")
+        from importlib import import_module
+        mod = import_module(name + ".shellsy")
         try:
-            plugin_shell = mod.shellsy.shellsy
+            plugin_shell = mod.shellsy
         except AttributeError as e:
-            print(dir(mod.shellsy), dir(mod), mod.__file__)
             raise ShellNotFound(name + " has no shell: " + str(e)) from e
         else:
             from shellsy.lexer import for_shell

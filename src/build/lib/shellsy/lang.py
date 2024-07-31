@@ -251,7 +251,7 @@ class PythonEvaluator(Expression.Evaluator):
                 STACKTRACE.add(
                     Stack(
                         content=fulltext[begin - 1 : begin + le],
-                        parent_pos=(lineno, begin),
+                        parent_pos=(lineno, begin - 1),
                         parent_text=fulltext,
                         file=file,
                     )
@@ -331,6 +331,8 @@ class ArgumentTypeMismatch(TypeError):
 
 @annotate
 def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
+    import decimal
+
     digits = set("01234567890e-E")
     decimals = digits | set(".")
     string_quotes = set("'\"")
@@ -397,9 +399,33 @@ def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
         )
         raise ShellsyNtaxError(
             f"unknown characters {err}" f"in string {string!r}",
-            STACKTRACE,
         )
     elif len(string_set - point_set) == 0:
+        values = []
+        pos = 0
+        while pos < len(string):
+            begin = pos
+            if "," in string[pos:]:
+                end = string.index(",", pos)
+            else:
+                end = len(string)
+            STACKTRACE.add(
+                Stack(
+                    content=string[begin:end],
+                    parent_pos=(1, begin),
+                    parent_text=string,
+                    file="<Point>",
+                )
+            )
+            try:
+                dec = Decimal(string[begin:end])
+            except decimal.InvalidOperation as e:
+                raise ShellsyNtaxError(str(e)) from e
+            else:
+                values.append(dec)
+            finally:
+                pos = end + 1
+                STACKTRACE.pop()
         return Point(map(Decimal, string.split(",")))
     elif len(string) >= 2 and string[0] == "(" and string[-1] == ")":
         if "#" in string:
