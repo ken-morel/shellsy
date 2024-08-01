@@ -13,7 +13,11 @@ def main(*_):
         sys.exit(1)
 
     if len(sys.argv) >= 2:
-        run_file(sys.argv[1])
+        file = sys.argv[1]
+        if file == "run":
+            Shellsy()(sys.argv[2:])
+        else:
+            run_file(sys.argv[1])
     else:
         enter_command_loop()
 
@@ -29,6 +33,7 @@ def run_file(file_name):
 def enter_command_loop():
     """Start the command loop for interactive shell."""
     Shellsy().cmdloop()
+
 
 if __name__ == "__main__":
     main()
