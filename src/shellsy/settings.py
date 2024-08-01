@@ -2,12 +2,10 @@ import json
 import os
 import sys
 
-from . import __author__ as author
-from . import __name__ as name
-from . import __version__ as version
-from appdirs import user_data_dir
+from pathlib import Path
 
-data_dir = user_data_dir(name, author, version, True)
+
+data_dir = Path.home() / ".shellsy"
 history = os.path.join(data_dir, "history.log")
 plugin_dir = os.path.join(data_dir, "plugins")
 

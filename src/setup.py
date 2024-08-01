@@ -4,7 +4,6 @@ from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
 from shellsy import __version__ as version
-import os
 
 project_dir = Path(__file__).parent
 
@@ -28,7 +27,7 @@ except FileNotFoundError:
         except FileNotFoundError:
             long_description = (project_dir.parent / "README.md").read_text()
 
-deps = ("pyoload", "prompt_toolkit", "comberload", "rich")
+deps = ("pyoload", "prompt_toolkit", "comberload", "rich", "appdirs")
 
 extra_flake8 = ()
 
