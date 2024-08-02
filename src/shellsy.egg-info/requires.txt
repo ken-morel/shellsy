@@ -2,6 +2,7 @@ pyoload
 prompt_toolkit
 comberload
 rich
+appdirs
 
 [ci]
 pytest

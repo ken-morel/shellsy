@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from pyoload import *
 from typing import Optional
-import comberload
 
 
 @dataclass

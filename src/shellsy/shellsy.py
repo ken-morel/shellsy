@@ -1,6 +1,8 @@
-from pathlib import Path
+import json
 import os
+
 from .shell import *
+from pathlib import Path
 
 import pytest
 
@@ -29,10 +31,37 @@ under certain conditions; type `c_` for details."""
             try:
                 os.chdir(path)
             except Exception as e:
-                print(e)
+                log.log(e)
         return Path(os.getcwd())
 
     chdir = cd
+
+    class bookmark(Shell):
+        @Command
+        def __entrypoint__(shell, _: Word["as"], name: str):
+            """\
+            Bookmarks the current directory, or simply adds it to the bookmarks
+            list
+            :param name: The name to bookmark under
+            """
+            bookmarks = get_setting("bookmarks", {})
+            bookmarks[name] = str(Path(".").resolve())
+            set_setting("bookmarks", bookmarks)
+
+        @__entrypoint__.dispatch
+        def __entrypoint__2(shell, name: str):
+            """\
+            Bookmarks the current directory, or simply adds it to the bookmarks
+            list
+            :param name: The name of bookmark
+            """
+            bookmarks = get_setting("bookmarks", {})
+            if name in bookmarks:
+                os.chdir(bookmarks[name])
+                StatusText("Moved to !", source="shellsy:.bookmark")
+            else:
+                shell.log.log("No such bookmark!")
+                return None
 
     @Command
     def mkdir(shell, path: Path = None):
@@ -45,7 +74,7 @@ under certain conditions; type `c_` for details."""
         try:
             os.makedirs(path)
         except Exception as e:
-            print(e)
+            log.log(e)
             return Nil
         else:
             return path
@@ -59,12 +88,12 @@ under certain conditions; type `c_` for details."""
         :returns: The new working directory
         """
         from rich.markdown import Markdown
-        from rich import print
+        from rich import log.log
 
         txt = ""
         for x in Path(".").resolve().glob(str(pattern)):
             txt += f"- {txt}\n"
-        print(Markdown(txt))
+        log.log(Markdown(txt))
         return tuple(Path(".").resolve().glob(str(pattern)))
 
     @Command
@@ -79,14 +108,14 @@ under certain conditions; type `c_` for details."""
         return repr(val)
 
     @Command
-    def print(shell, val):
+    def log.log(shell, val):
         """
-        prints the passed value to stdout and returns None
-        :param val: the value to print
+        log.logs the passed value to stdout and returns None
+        :param val: the value to log.log
 
         :returns: None
         """
-        return print(repr(val))
+        return log.log(repr(val))
 
     @Command
     def var(shell, var: Variable, val=None):
@@ -211,7 +240,7 @@ under certain conditions; type `c_` for details."""
         @Command
         def __entrypoint__(shell):
             """\
-            status command prints all the currently showing status messages
+            status command log.logs all the currently showing status messages
 
             :returns: None
             """
@@ -329,19 +358,19 @@ under certain conditions; type `c_` for details."""
 
         :returns: THe plugin shell or `None` if fails import
         """
-        print(f"importing {name=}")
+        log.log(f"importing {name=}")
         try:
             shell.import_subshell(name)
         except (ImportError, ModuleNotFoundError) as e:
-            print(e)
+            log.log(e)
 
     @_import.dispatch
     def _import_as(shell, location: str, _: Word["as"], name: str):
-        print("importing", location, "as", name)
+        log.log("importing", location, "as", name)
         try:
             shell.import_subshell(location, as_=name)
         except (ImportError, ModuleNotFoundError) as e:
-            print(e)
+            log.log(e)
 
     @_import.dispatch
     def _import_or_install(
@@ -379,7 +408,112 @@ under certain conditions; type `c_` for details."""
             if command:
                 pprint(shell.master.get_command(command).help.markdown())
             else:
-                print("no command specified")
+                log.error("no command specified")
+
+    class json(Shell):
+        @Command
+        def load(shell, file: Path, var: Variable = None):
+            """\
+Deserialize a JSON formatted stream to a Python object.
+
+:param fp: A file-like object containing a JSON document. The file object must
+have a method called `read()`
+           that returns a string containing the JSON data.
+:param **kwargs: Additional keyword arguments that control the deserialization
+process, such as:
+                 - `object_hook`: (function) function that will be called with
+                   the result of every JSON object
+                   decoded; this can be useful for customizing the
+                   deserialization of objects.
+                 - `parse_float`: (function) function that will be called with
+                   the string of every JSON float
+                   to be decoded; this can be useful for customizing how floats
+                   are parsed.
+                 - `parse_int`: (function) function that will be called with
+                   the string of every JSON int
+                   to be decoded; this can be useful for customizing how ints
+                   are parsed.
+
+:returns: The resulting Python object.
+
+:raises json.JSONDecodeError: If the JSON is malformed or cannot be decoded.
+                """
+            if not file.exists():
+                log.error("file does not exist")
+            text = file.read_text()
+            try:
+                data = json.loads(text)
+            except Exception as e:
+                log.error(e)
+            else:
+                if var is not None:
+                    var.set(data)
+                return data
+
+        @Command
+        def dump(shell, data: Any, file: Path = None, indent: int = None):
+            """
+Serialize a Python object to a JSON formatted string.
+
+:param obj: The Python object to convert to a JSON string.
+:param indent: Additional keyword arguments that control the serialization
+                   process, such as:
+                 - `indent`: (int) specifies the number of spaces for
+                   indentation.
+                 - `separators`: (tuple) customizes the item and key separator.
+                 - `sort_keys`: (bool) if True, the output will be sorted by
+                    keys.
+
+:returns: A JSON formatted string representation of the object.
+            """
+            try:
+                text = json.dumps(data, indent=indent)
+            except Exception as e:
+                log.error(e)
+            else:
+                if file is not None:
+                    try:
+                        file.write_text(text)
+                    except Exception as e:
+                        log.error("error writing to file: " + str(e))
+                return text
+
+    class yaml(Shell):
+        @Command
+        def load(shell, file: Path, var: Variable = None):
+            try:
+                import yaml
+            except ImportError:
+                return log.error("yaml not installed")
+            if not file.exists():
+                return log.error("file does not exist")
+            text = file.read_text()
+            try:
+                data = yaml.safe_loads(text)
+            except Exception as e:
+                log.error(e)
+            else:
+                if var is not None:
+                    var.set(data)
+                return data
+
+        @Command
+        def dump(shell, data: Any, file: Path = None):
+            try:
+                import yaml
+            except ImportError:
+                return log.error("yaml not installed")
+            try:
+                text = yaml.safe_dump(data)
+            except Exception as e:
+                log.error(e)
+            else:
+                if file is not None:
+                    try:
+                        file.write_text(text)
+                    except Exception as e:
+                        log.error("error writing to file: " + str(e))
+                return text
 
     @Command
     def exit(shell):
@@ -389,8 +523,8 @@ under certain conditions; type `c_` for details."""
     def w_(shell):
         """Shellsy waranty"""
         from rich.markdown import Markdown
-        from rich import print
-        print(Markdown("""# Warranty Disclaimer
+        from rich import log.log
+        log.log(Markdown("""# Warranty Disclaimer
 
 This program is distributed in the hope that it will be useful,
 but **WITHOUT ANY WARRANTY**; without even the implied warranty of
@@ -413,8 +547,8 @@ Thank you for using our software!"""))
     def c_(shell):
         """Shellsy waranty"""
         from rich.markdown import Markdown
-        from rich import print
-        print(Markdown("""# License Information
+        from rich import log.log
+        log.log(Markdown("""# License Information
 
 This program is licensed under the **GNU General Public License (GPL)**.
 
