@@ -222,7 +222,9 @@ class CommandParameters:
 
         for idx, param in enumerate(self.params):
             if param not in kwargs:
-                if should_dispatch:
+                if param.default is not _empty:
+                    kwargs[param] = param.default
+                elif should_dispatch:
                     raise ShouldDispath(
                         ArgumentError(
                             f"missing argument for {param}", STACKTRACE
