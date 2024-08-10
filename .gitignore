@@ -1,0 +1,6 @@
+.pytest_cache
+shellsy.egg-info
+__pycache__
+del
+__
+build

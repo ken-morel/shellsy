@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This file was created by NSISDialogDesigner 1.6.0.0
+https://coolsoft.altervista.org/nsisdialogdesigner
+Do not edit manually!
+-->
+<Dialog Name="shellsy" Font="Aclonica, 8.25pt" Title="Dialog title..." Subtitle="Dialog subtitle..." BackColor="17, 34, 51">
+  <HLine Name="HLine1" Location="212, 123" Size="174, 2" />
+  <VLine Name="VLine1" Location="212, -6" Size="2, 242" />
+  <RadioButton Name="RadioButton3" Location="226, 94" Size="196, 24" Text="Other" TabIndex="2" />
+  <RadioButton Name="RadioButton2" Location="226, 70" Size="196, 24" Text="A python developer" TabIndex="3" />
+  <Label Name="WhyShellsyLabel" Location="229, 15" Text="Why Shellsy?" ForeColor="White" TabIndex="4" />
+  <RadioButton Name="RadioButton1" Location="226, 46" Size="196, 24" Text="A community member" TabIndex="5" />
+  <Bitmap Name="Bitmap1" Location="3, 9" Size="209, 218" ImageFilename="F:\shellsy\shellsy.bmp" TabIndex="6" />
+</Dialog>

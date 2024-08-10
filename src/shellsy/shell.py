@@ -1,3 +1,25 @@
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024  Ken Morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
 from . import lexer
 
 import comberload
@@ -10,18 +32,8 @@ from .settings import *
 from .help import CommandHelp
 import time
 from inspect import Signature
-import logging
-from rich.logging import RichHandler
 from rich import print as pprint
 from rich.markdown import Markdown
-
-FORMAT = "%(message)s"
-
-logging.basicConfig(
-    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
-)
-
-log = logging.getLogger("rich")
 
 
 @annotate
@@ -118,6 +130,21 @@ class Shell(Command):
     _bindings = None
     _log = ""
 
+    class Logger:
+        def __init__(self, shell):
+            from rich.console import Console
+            self.console = Console()
+            self.shell = shell
+
+        def log(self, text):
+            self.console.print(text)
+
+        def print(self, *args, **kw):
+            self.console.print(*args, **kw)
+
+        def error(self, name, text):
+            self.console.print(name + ": " + text)
+
     def __init_subclass__(cls):
         cls.name = cls.__name__.lower()
 
@@ -128,6 +155,7 @@ class Shell(Command):
         else:
             self.parent = None
             self.master = self
+        self.log = Shell.Logger(self)
         Shell.master = self.master
         if not hasattr(self, "subshells"):
             self.subshells = {}

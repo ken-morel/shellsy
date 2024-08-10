@@ -1,3 +1,25 @@
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024  Ken Morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
 import json
 import os
 
@@ -31,7 +53,7 @@ under certain conditions; type `c_` for details."""
             try:
                 os.chdir(path)
             except Exception as e:
-                log.log(e)
+                print(e)
         return Path(os.getcwd())
 
     chdir = cd
@@ -60,7 +82,7 @@ under certain conditions; type `c_` for details."""
                 os.chdir(bookmarks[name])
                 StatusText("Moved to !", source="shellsy:.bookmark")
             else:
-                shell.log.log("No such bookmark!")
+                print("No such bookmark!")
                 return None
 
     @Command
@@ -74,7 +96,7 @@ under certain conditions; type `c_` for details."""
         try:
             os.makedirs(path)
         except Exception as e:
-            log.log(e)
+            print(e)
             return Nil
         else:
             return path
@@ -88,12 +110,12 @@ under certain conditions; type `c_` for details."""
         :returns: The new working directory
         """
         from rich.markdown import Markdown
-        from rich import log.log
+        from rich import print
 
         txt = ""
         for x in Path(".").resolve().glob(str(pattern)):
             txt += f"- {txt}\n"
-        log.log(Markdown(txt))
+        print(Markdown(txt))
         return tuple(Path(".").resolve().glob(str(pattern)))
 
     @Command
@@ -108,14 +130,14 @@ under certain conditions; type `c_` for details."""
         return repr(val)
 
     @Command
-    def log.log(shell, val):
+    def print(shell, val):
         """
-        log.logs the passed value to stdout and returns None
-        :param val: the value to log.log
+        prints the passed value to stdout and returns None
+        :param val: the value to print
 
         :returns: None
         """
-        return log.log(repr(val))
+        return print(repr(val))
 
     @Command
     def var(shell, var: Variable, val=None):
@@ -240,7 +262,7 @@ under certain conditions; type `c_` for details."""
         @Command
         def __entrypoint__(shell):
             """\
-            status command log.logs all the currently showing status messages
+            status command prints all the currently showing status messages
 
             :returns: None
             """
@@ -358,19 +380,17 @@ under certain conditions; type `c_` for details."""
 
         :returns: THe plugin shell or `None` if fails import
         """
-        log.log(f"importing {name=}")
         try:
             shell.import_subshell(name)
         except (ImportError, ModuleNotFoundError) as e:
-            log.log(e)
+            print(e)
 
     @_import.dispatch
     def _import_as(shell, location: str, _: Word["as"], name: str):
-        log.log("importing", location, "as", name)
         try:
             shell.import_subshell(location, as_=name)
         except (ImportError, ModuleNotFoundError) as e:
-            log.log(e)
+            print(e)
 
     @_import.dispatch
     def _import_or_install(
@@ -523,8 +543,8 @@ Serialize a Python object to a JSON formatted string.
     def w_(shell):
         """Shellsy waranty"""
         from rich.markdown import Markdown
-        from rich import log.log
-        log.log(Markdown("""# Warranty Disclaimer
+        from rich import print
+        print(Markdown("""# Warranty Disclaimer
 
 This program is distributed in the hope that it will be useful,
 but **WITHOUT ANY WARRANTY**; without even the implied warranty of
@@ -547,8 +567,8 @@ Thank you for using our software!"""))
     def c_(shell):
         """Shellsy waranty"""
         from rich.markdown import Markdown
-        from rich import log.log
-        log.log(Markdown("""# License Information
+        from rich import print
+        print(Markdown("""# License Information
 
 This program is licensed under the **GNU General Public License (GPL)**.
 
