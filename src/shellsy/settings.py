@@ -1,13 +1,34 @@
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024  Ken Morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import json
 import os
 import sys
 
-from . import __author__ as author
-from . import __name__ as name
-from . import __version__ as version
-from appdirs import user_data_dir
+from pathlib import Path
 
-data_dir = user_data_dir(name, author, version, True)
+
+data_dir = Path.home() / ".shellsy"
 history = os.path.join(data_dir, "history.log")
 plugin_dir = os.path.join(data_dir, "plugins")
 

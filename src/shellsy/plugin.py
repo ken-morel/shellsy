@@ -1,3 +1,26 @@
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024 ken-morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 from pyoload import annotate
 from dataclasses import dataclass, field
 from typing import Iterable
@@ -35,35 +58,14 @@ def initialize_plugin(
         f"""\
 import {name}
 from pathlib import Path
-
-from setuptools import find_packages
 from setuptools import setup
-from setuptools.command.install import install
-from shellsy import __version__ as version
-import os
 
 project_dir = Path(__file__).parent
-
-
-class ShellsyInstallCommand(install):
-    def run(self):
-        import shellsy.settings
-
-        shellsy.settings.init()
-        super().run()
-
 
 try:
     long_description = (project_dir / "README.md").read_text()
 except FileNotFoundError:
-    try:
-        long_description = Path("README.md").read_text()
-    except FileNotFoundError:
-        try:
-            long_description = Path("/src/README.md").read_text()
-        except FileNotFoundError:
-            long_description = (project_dir.parent / "README.md").read_text()
-
+    long_description = Path("README.md").read_text()
 
 setup(
     name={name!r},
@@ -95,7 +97,8 @@ setup(
         os.mkdir(name)
     except FileExistsError:
         pass
-    open(f"{name}/__init__.py", "w").write(f"""\
+    open(f"{name}/__init__.py", "w").write(
+        f"""\
 {description!r}
 __version__ = {version!r}
 __author__ = {author!r}
@@ -103,14 +106,17 @@ __author__ = {author!r}
 # Do not import anything here!
 
 shellsy_config = {dict()!r}
-    """)
+    """
+    )
     open("README.md", "w").write(
         f"""\
 # {name}
 
 {description}
-""")
-    open(f"{name}/shellsy.py", "w").write(f"""\
+"""
+    )
+    open(f"{name}/shellsy.py", "w").write(
+        f"""\
 from shellsy.shell import *
 
 class shellsy(Shell):
@@ -121,7 +127,8 @@ class shellsy(Shell):
     @Command
     def echo(shell, val):
         return val
-    """)
+    """
+    )
 
 
 class Plugin:

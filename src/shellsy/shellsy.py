@@ -1,6 +1,31 @@
-from pathlib import Path
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024  Ken Morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
+import json
 import os
+
 from .shell import *
+from pathlib import Path
 
 import pytest
 
@@ -12,10 +37,29 @@ class Shellsy(Shell):
     Welcome, to shellsy, here you will build simple tools
     """
 
-    intro = """shellsy  Copyright (C) 2024  ken-morel
-This program comes with ABSOLUTELY NO WARRANTY; for details type `w_'.
-This is free software, and you are welcome to redistribute it
-under certain conditions; type `c_' for details."""
+    intro = """shellsy  Copyright (C) 2024 ken-morel
+    This program comes with ABSOLUTELY NO WARRANTY; for details type `w_`.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `c_` for details."""
+
+    def __init__(self):
+        for attr in dir(self):
+            if attr == "__entrypoint__":
+                self.commands["__entrypoint__"] = getattr(self, attr)
+            if attr.startswith("__"):
+                continue
+            try:
+                if isinstance(cmd := getattr(self, attr), Command):
+                    cmd.shell = self
+                    if attr[0] == "_":
+                        attr = attr[1:]
+                    self.commands[attr] = cmd
+                elif issubclass(subcls := getattr(self, attr), Shell):
+                    if attr[0] == "_":
+                        attr = attr[1:]
+                    self.subshells[attr] = subcls(self)
+            except (AttributeError, TypeError):
+                pass
 
     @Command
     def cd(shell, path: Path = None):
@@ -34,6 +78,33 @@ under certain conditions; type `c_' for details."""
 
     chdir = cd
 
+    class bookmark(Shell):
+        @Command
+        def __entrypoint__(shell, _: Word["as"], name: str):
+            """\
+            Bookmarks the current directory, or simply adds it to the bookmarks
+            list
+            :param name: The name to bookmark under
+            """
+            bookmarks = get_setting("bookmarks", {})
+            bookmarks[name] = str(Path(".").resolve())
+            set_setting("bookmarks", bookmarks)
+
+        @__entrypoint__.dispatch
+        def __entrypoint__2(shell, name: str):
+            """\
+            Bookmarks the current directory, or simply adds it to the bookmarks
+            list
+            :param name: The name of bookmark
+            """
+            bookmarks = get_setting("bookmarks", {})
+            if name in bookmarks:
+                os.chdir(bookmarks[name])
+                StatusText("Moved to !", source="shellsy:.bookmark")
+            else:
+                print("No such bookmark!")
+                return None
+
     @Command
     def mkdir(shell, path: Path = None):
         """
@@ -49,6 +120,23 @@ under certain conditions; type `c_' for details."""
             return Nil
         else:
             return path
+
+    @Command
+    def dir(shell, pattern: str | Path = "*"):
+        """
+        The command utility to change directory
+        :param path: The new path to assign
+
+        :returns: The new working directory
+        """
+        from rich.markdown import Markdown
+        from rich import print
+
+        txt = ""
+        for x in Path(".").resolve().glob(str(pattern)):
+            txt += f"- {txt}\n"
+        print(Markdown(txt))
+        return tuple(Path(".").resolve().glob(str(pattern)))
 
     @Command
     def echo(shell, val):
@@ -72,7 +160,7 @@ under certain conditions; type `c_' for details."""
         return print(repr(val))
 
     @Command
-    def var(shell, var: Variable, val=None):
+    def var(shell, var: S_Variable, val=None):
         """
         setts or gets a variable
         :param var: te variable
@@ -93,88 +181,6 @@ under certain conditions; type `c_' for details."""
         :returns: The evaluate
         """
         return var
-
-    @Command
-    def _if(
-        shell,
-        condition: Expression,
-        then: CommandBlock,
-        __: Word["else"] = None,
-        else_: CommandBlock = None,
-    ):
-        """
-            Evaluates a condition and executes a command block if the condition
-             is met.
-            If the condition is not met and an else block is provided,
-            the else block is executed.
-
-            :param condition: The condition to evaluate before executing the
-            'then' block. It should be a function that returns a boolean value.
-            :param then: The command block to execute if the condition is met.
-             This block contains the commands to run when the condition is true
-            :param else_: Optional - The command block to execute if the
-            condition is not met. If provided, this block will be executed when
-            the condition is false.
-
-            :returns: The result of executing the 'then' block or the 'else'
-            block if the condition is not met.
-
-            For example:
-            if (x > 5) {echo 'x > 5'} else {echo 'x <= 5'}
-
-            [[2]](https://poe.com/citation?message_id=224987918374&citation=2)
-        """
-        if condition():
-            return then.evaluate(shell)
-        else:
-            if else_ is not None:
-                return else_.evaluate(shell)
-            return None
-
-    @Command
-    def _while(
-        shell,
-        condition: Expression,
-        then: CommandBlock,
-    ):
-        """
-        The 'while' command in shellsy creates a loop that iterates as long as
-        a specified condition is met. This command enables the repetitive
-        execution of a block of commands until the condition evaluates to False
-
-        :param condition: The condition parameter defines the expression to be
-        evaluated in each iteration of the loop. The 'while' command will
-        continue executing the associated block of commands as long as this
-        condition remains True. It serves as the criteria for determining the
-        loop's continuation
-
-        :param command_block: The command_block parameter represents the block
-        of commands that will be executed repeatedly as part of the 'while'
-        loop. This block contains the actions or logic that should be performed
-        iteratively until the condition evaluates to False. It encapsulates the
-        commands to be executed within the loop structure
-
-        :returns: The 'while' command does not have an explicit return value,
-        as its primary function is to facilitate iterative execution based on
-        the specified condition. The execution of the command_block within the
-        loop allows for repetitive actions until the condition becomes False.
-        The return value is determined by the commands executed within the loop
-
-        Example usage:
-        _while(lambda: x > 5, CommandBlock(...))
-
-        Utilize the 'while' command in shellsy with the provided parameters and
-        syntax to implement loops that perform repetitive actions based on
-        defined conditions.
-        This feature enhances the flexibility and functionality of your scripts
-        by enabling iterative execution of commands until a specific condition
-        is no longer met
-        """
-        ret = None
-        while condition():
-            ret = then.evaluate(shell)
-
-        return ret
 
     class config(Shell):
         def __entrypoint__(shell, name: str, val: Any = None):
@@ -300,9 +306,7 @@ under certain conditions; type `c_' for details."""
             import os
             from shellsy.settings import plugin_dir
 
-            os.system(
-                f'pip install {path} --target "{plugin_dir}" --upgrade'
-            )
+            os.system(f'pip install {path} --target "{plugin_dir}" --upgrade')
 
     @Command
     def _import(shell, name: str):
@@ -320,7 +324,7 @@ under certain conditions; type `c_' for details."""
     @_import.dispatch
     def _import_as(shell, location: str, _: Word["as"], name: str):
         try:
-            shell.import_subshell(location, name)
+            shell.import_subshell(location, as_=name)
         except (ImportError, ModuleNotFoundError) as e:
             print(e)
 
@@ -360,7 +364,91 @@ under certain conditions; type `c_' for details."""
             if command:
                 pprint(shell.master.get_command(command).help.markdown())
             else:
-                print("no command specified")
+                log.error("no command specified")
+
+    class json(Shell):
+        @Command
+        def load(shell, file: Path, var: S_Variable = None):
+            """\
+            Deserialize a JSON formatted stream to a Python object.
+
+            :param fp: A file-like object containing a JSON document.
+
+            :returns: The resulting object.
+
+            :raises json.JSONDecodeError: If the JSON is malformed or cannot
+            be decoded.
+                """
+            if not file.exists():
+                log.error("file does not exist")
+            text = file.read_text()
+            try:
+                data = json.loads(text)
+            except Exception as e:
+                log.error(e)
+            else:
+                if var is not None:
+                    var.set(data)
+                return data
+
+        @Command
+        def dump(shell, data: Any, file: Path = None, indent: int = None):
+            """
+            Serialize a Python object to a JSON formatted string.
+
+            :param obj: The Python object to convert to a JSON string.
+            :param indent: specifies the number of spaces for indentation.
+
+            :returns: A JSON formatted string representation of the object.
+            """
+            try:
+                text = json.dumps(data, indent=indent)
+            except Exception as e:
+                log.error(e)
+            else:
+                if file is not None:
+                    try:
+                        file.write_text(text)
+                    except Exception as e:
+                        log.error("error writing to file: " + str(e))
+                return text
+
+    class yaml(Shell):
+        @Command
+        def load(shell, file: Path, var: S_Variable = None):
+            try:
+                import yaml
+            except ImportError:
+                return log.error("yaml not installed")
+            if not file.exists():
+                return log.error("file does not exist")
+            text = file.read_text()
+            try:
+                data = yaml.safe_loads(text)
+            except Exception as e:
+                log.error(e)
+            else:
+                if var is not None:
+                    var.set(data)
+                return data
+
+        @Command
+        def dump(shell, data: Any, file: Path = None):
+            try:
+                import yaml
+            except ImportError:
+                return log.error("yaml not installed")
+            try:
+                text = yaml.safe_dump(data)
+            except Exception as e:
+                log.error(e)
+            else:
+                if file is not None:
+                    try:
+                        file.write_text(text)
+                    except Exception as e:
+                        log.error("error writing to file: " + str(e))
+                return text
 
     @Command
     def exit(shell):
@@ -371,54 +459,70 @@ under certain conditions; type `c_' for details."""
         """Shellsy waranty"""
         from rich.markdown import Markdown
         from rich import print
-        print(Markdown("""# Warranty Disclaimer
 
-This program is distributed in the hope that it will be useful,
-but **WITHOUT ANY WARRANTY**; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+        print(
+            Markdown(
+                """# Warranty Disclaimer
 
-For more details, refer to the [GNU General Public License]
-(https://www.gnu.org/licenses/gpl-3.0.html).
+                This program is distributed in the hope that it will be useful,
+                but **WITHOUT ANY WARRANTY**; without even the implied warranty
+                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-## Important Notes:
-- You are advised to test the program extensively before using it in any
-critical applications.
-- The authors and contributors of this software are not responsible for any
-damages that may occur through its use.
-- If you encounter any issues, please consider reporting them to the respective
-maintainers for potential improvements.
+                For more details, refer to the [GNU General Public License]
+                (https://www.gnu.org/licenses/gpl-3.0.html).
 
-Thank you for using our software!"""))
+                ## Important Notes:
+                - You are advised to test the program extensively before using
+                  it in any critical applications.
+                - The authors and contributors of this software are not
+                  responsible for any damages that may occur through its use.
+                - If you encounter any issues, please consider reporting them
+                  to the respective maintainers for potential improvements.
+
+                Thank you for using our software!"""
+            )
+        )
 
     @Command
     def c_(shell):
         """Shellsy waranty"""
         from rich.markdown import Markdown
         from rich import print
-        print(Markdown("""# License Information
 
-This program is licensed under the **GNU General Public License (GPL)**.
+        print(
+            Markdown(
+                """# License Information
 
-## Key Points of the License:
+                This program is licensed under the
+                **GNU General Public License (GPL)**.
 
-- **Freedom to Use**: You are free to use this software for any purpose.
-- **Access to Source Code**: You can view, modify, and distribute the source
-  code.
-- **Distribution**: When redistributing the software, you must provide the
-  same license terms to others. This ensures that everyone can benefit from the
-  freedoms granted by this license.
+                ## Key Points of the License:
 
-## Disclaimer:
-- This software is provided "as is", without any warranty of any kind, express
-  or implied.
-- For more details, please read the full text of the
-  [GNU General Public License]
-  (https://www.gnu.org/licenses/gpl-3.0.html).
+                - **Freedom to Use**: You are free to use this software for
+                  any purpose.
+                - **Access to Source Code**: You can view, modify, and
+                  distribute the source
+                  code.
+                - **Distribution**: When redistributing the software, you must
+                  provide the same license terms to others. This ensures that
+                  everyone can benefit from the freedoms granted by this
+                  license.
 
-## Additional Information:
-- If you modify this program and distribute it, you must include a copy of
-  this license.
-- Please contribute your improvements back to the community when possible.
+                ## Disclaimer:
+                - This software is provided "as is", without any warranty of
+                  any kind, express or implied.
+                - For more details, please read the full text of the
+                  [GNU General Public License]
+                  (https://www.gnu.org/licenses/gpl-3.0.html).
 
-Thank you for choosing our software and supporting open-source development!
-"""))
+                ## Additional Information:
+                - If you modify this program and distribute it, you must
+                  include a copy of this license.
+                - Please contribute your improvements back to the community
+                  when possible.
+
+                Thank you for choosing our software and supporting open-source
+                development!
+                """
+            )
+        )

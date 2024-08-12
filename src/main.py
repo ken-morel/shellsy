@@ -1,6 +1,14 @@
+print("hallo")
 import sys
 from shellsy.shellsy import Shellsy
 from shellsy.settings import init
+
+try:
+    import pyi_splash
+
+    pyi_splash.close()
+except ImportError:
+    pass
 
 
 def main(*_):
@@ -13,7 +21,11 @@ def main(*_):
         sys.exit(1)
 
     if len(sys.argv) >= 2:
-        run_file(sys.argv[1])
+        file = sys.argv[1]
+        if file == "run":
+            Shellsy()(sys.argv[2:])
+        else:
+            run_file(sys.argv[1])
     else:
         enter_command_loop()
 
@@ -30,5 +42,10 @@ def enter_command_loop():
     """Start the command loop for interactive shell."""
     Shellsy().cmdloop()
 
-if __name__ == "__main__":
-    main()
+
+#if __name__ == "__main__":
+    # main()
+from shellsy.interpreter import S_Interpreter
+inter = S_Interpreter()
+while True:
+    print(inter.eval(input("> ")))

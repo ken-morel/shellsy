@@ -1,43 +1,71 @@
-import os
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
 
-from .exceptions import *
-from dataclasses import dataclass
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024 ken-morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 from decimal import Decimal
 from pathlib import Path
-from pyoload import *
-from typing import Iterable
-from typing import Optional
+from pyoload import type_match
+import string
+
+from pyoload import annotate
 
 
-class Context(dict):
+class S_Object:
+    __slots__ = ()
+
+
+class S_Point(S_Object, tuple):
     pass
 
 
-context = Context(
-    {
-        "_": None,
-        "out": [],
-    }
-)
+class S_NameSpace(S_Object, dict):
+    __slots__ = S_Object.__slots__
 
 
-class ShellsyCustomType:
-    pass
+class S_Command(S_Object):
+    command: "Command"
+    arguments: "CommandArguments"
+
+    def __init__(self, command: "Command", args: "S_Arguments"):
+        self.command = command
+        self.args = args
+
+    def evaluate(self):
+        return self.command(self.args)
 
 
-class NilType(ShellsyCustomType):
+class NilType(S_Object):
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(NilType, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
     def __repr__(self):
         return "Nil"
 
     def __reduce__(self):
-        return (NilType, ())
+        return (self.__class__, ())
 
     def __bool__(self):
         return False
@@ -52,176 +80,90 @@ class NilType(ShellsyCustomType):
         return other is Nil
 
 
-class _WordsMeta(type):
-    """Metaclass for creating Keyword subclasses dynamically."""
+Nil = NilType()
 
-    def __getitem__(cls, items):
-        from typing import Union
 
-        if not isinstance(items, tuple):
+S_Literal = (
+    int
+    | Decimal
+    | Path
+    | str
+    | slice
+    | list
+    | dict
+    | S_Object
+    | type(None)
+    | bool
+    | NilType
+)
+
+
+class _Word_meta(type):
+    def __getitem__(self, items):
+        if isinstance(items, str):
             items = (items,)
-        for w in items:
-            if w not in Word.words:
-                Word.add(w)
-        return Union[tuple(map(Word.words.get, items))]
+        return tuple(map(Word, items))
 
 
-class Word(ShellsyCustomType, metaclass=_WordsMeta):
-    class DoesNotExist(ShellsyNtaxError, ValueError):
-        pass
+class Word(S_Object, metaclass=_Word_meta):
+    _instances = {}
 
-    words = {}
-
-    def __reduce__(self):
-        return self._name
-
-    def __new__(cls, name, *args, **kwargs):
-        if name in cls.words:
-            return cls.words[name]()
-            # return super(Word, cls).__new__(cls.keywords[name])
-        else:
-            raise Word.DoesNotExist(name)
-
-    @classmethod
-    def add(cls, name):
-        setattr(
-            Word,
-            name,
-            new_class := type(
-                "Word." + name,
-                (Word._Word, cls),
-                {
-                    "name": name,
-                },
-            ),
-        )
-        cls.words[name] = new_class
-        return super(Word, cls).__new__(new_class)
-
-    def __instancecheck__(self, obj):
-        if isinstance(obj, str):
-            obj = Word(obj)
-        if object.__instancecheck__(obj):
-            return obj.name == self.name
-        return False
+    def __new__(cls, name: str):
+        if name not in cls._instances:
+            cls._instances[name] = super().__new__(cls)
+            cls._instances[name].name = name
+        return cls._instances[name]
 
     def __repr__(self):
-        return f"{self.name}"
+        return self.name
+
+    def __reduce__(self):
+        return (self.__class__, ())
+
+    def __instancecheck__(self, other):
+        return other is self
 
     def __hash__(self):
         return hash(self.name)
 
-    class _Word:
-        _instance = None
 
-        def __new__(cls):
-            if cls._instance is None:
-                cls._instance = object.__new__(cls)
-            return cls._instance
-
-
-class CommandBlock(ShellsyCustomType):
-    commands: Iterable[str]
-    auto_evaluate = False
-
-    def __init__(self, commands: Iterable[str], auto_evaluate=False):
-        from .args import CommandCall
-
-        self.auto_evaluate = auto_evaluate
-        self.commands = list(map(CommandCall.from_string, commands))
-
-    def evaluate(self, shell=None):
-        from .shell import Shell
-
-        ret = None
-
-        for cmd in self.commands:
-            ret = (shell or Shell.master).call(cmd)
-
-        return ret
-
-    @classmethod
-    def from_string(cls, string):
-        auto_evaluate = (
-            len(string) > 1 and string[0] == "{" and string[-1] == "}"
-        )
-        if auto_evaluate:
-            string = string[1:-1]
-        print(auto_evaluate)
-        lines = []
-        pos = 0
-        while pos < len(string):  # collect each line
-            stack = []
-            begin = pos
-            while pos < len(string):
-                if string[pos] == "{":
-                    stack.append("{")
-                elif string[pos] == "}":
-                    stack.pop()
-                elif string[pos] == ";" and len(stack) == 0:
-                    # pos += 1
-                    break
-                pos += 1
-            lines.append(string[begin:pos].strip())
-            pos += 1
-        return cls(lines, auto_evaluate=auto_evaluate)
-
+class S_Variable(S_Object, str):
     def __repr__(self):
-        return "{" + ";".join(map(str, self.commands)) + "}"
+        return "$" + self
 
 
-@annotate
-class Expression(ShellsyCustomType):
+class S_Expression(S_Object):
     evaluators = {}
     type: str
     string: str
-    context: "Context"
     auto_evaluate = False
 
     def __init__(
         self,
         type: str,
         string: str,
-        context: Context = context,
         fullstring=None,
+        idx=0,
     ):
         self.type = type
         self.string = string
         if len(string) > 1 and string[0] == "(" and string[-1] == ")":
             self.auto_evaluate = True
             string = string[1:-1]
-        self.context = context
-        if type not in Expression.evaluators:
-            STACKTRACE.add(
-                Stack(
-                    content=type,
-                    parent_text=fullstring or string,
-                    parent_pos=(1, (fullstring or string).find(type)),
-                    file="<expr>",
-                )
-            )
-            raise ShellsyNtaxError(
+        if type not in S_Expression.evaluators:
+            raise WrongLiteral(
                 f"Unrecognised expression type {type!r}",
+                fullstring,
+                idx,
+                string,
             )
-
-    def __call__(self):
-        return Expression.evaluate(self.type, self.string, self.context)
-
-    @classmethod
-    def evaluate(cls, type, string, context):
-        if type not in cls.evaluators:
-            raise ShellsyNtaxError(
-                f"Unrecognised expression prefix {type!r}",
-                ("<string>", 1, 1, type, 1, len(type)),
-            )
-        return cls.evaluators[type](context, string).evaluate()
 
     def __repr__(self):
         return f"({self.type}#{self.string})"
 
     class Evaluator:
         def __init_subclass__(cls):
-            Expression.evaluators[cls.prefix] = cls
+            S_Expression.evaluators[cls.prefix] = cls
 
         def __init__(self, context, string):
             self.string = string
@@ -231,7 +173,7 @@ class Expression(ShellsyCustomType):
             raise NotImplementedError("should be overriden in subclasses")
 
 
-class PythonEvaluator(Expression.Evaluator):
+class PythonEvaluator(S_Expression.Evaluator):
     prefix = "py"
 
     def evaluate(self):
@@ -248,409 +190,207 @@ class PythonEvaluator(Expression.Evaluator):
             except Exception:
                 _, (file, lineno, begin, fulltext, __, le) = e.args
             finally:
-                STACKTRACE.add(
-                    Stack(
-                        content=fulltext[begin - 1 : begin + le],
-                        parent_pos=(lineno, begin - 1),
-                        parent_text=fulltext,
-                        file=file,
-                    )
-                )
-            raise ShellsyNtaxError(str(e))
+                # STACKTRACE.add(
+                #     Stack(
+                #         content=fulltext[begin - 1 : begin + le],
+                #         parent_pos=(lineno, begin - 1),
+                #         parent_text=fulltext,
+                #         file=file,
+                #     )
+                # )
+                raise ShellsyNtaxError(str(e))
         except Exception as e:
             print(e)
 
 
-class Point(tuple, ShellsyCustomType):
-    @property
-    def x(self):
-        return self[0]
+class _Parser:
+    COMMAND_NAME = set(string.ascii_letters + ".")
+    INTEGER = set("0123456789-+")
+    DECIMAL = INTEGER | set(".")
+    NUMBER = INTEGER | DECIMAL
+    SLICE = INTEGER | set(":")
+    STRING_QUOTES = set("\"'`")
+    POINT = DECIMAL | set(",")
+    Next = tuple[str | type(None), int]
 
-    @property
-    def y(self):
-        return self[1]
+    class WrongLiteral(Exception):
+        params: tuple[str, str, int, int, int]
 
-    @property
-    def z(self):
-        return self[2]
-
-    def __repr__(self):
-        return f"Point{tuple.__repr__(self)}"
-
-
-Nil = NilType()
-
-Literal = (
-    int
-    | Decimal
-    | Path
-    | str
-    | slice
-    | list
-    | dict
-    | ShellsyCustomType
-    | type(None)
-    | bool
-    | type(Nil)
-)
-
-
-@annotate
-class Variable(ShellsyCustomType):
-    name: str
-    context: Context
-    auto_evaluate = False
-
-    def __init__(self, name: str, context: Context = context):
-        self.name = name
-        self.context = context
-
-    def __call__(self, val: Literal = None) -> Literal:
-        if val is not None:
-            self.context[self.name] = val
-        return self.context.get(self.name)
-
-    def __repr__(self):
-        return f"${self.name}"  # :{self.context.get(self.name)!r}
-
-
-class ArgumentTypeMismatch(TypeError):
-    def __init__(self, param, val, pos=-1):
-        self.param = param
-        self.val = val
-        self.pos = pos
-
-    def show(self):
-        msg = (
-            f"Value {self.val!r} does not match spec of parameter {self.param}"
-        )
-        if self.pos > -1:
-            msg += f"(Positional argument {self.pos})"
-        print(msg)
-
-
-@annotate
-def evaluate_literal(string: str, pos=1, full_string=None) -> Literal:
-    import decimal
-
-    digits = set("01234567890e-E")
-    decimals = digits | set(".")
-    string_quotes = set("'\"")
-    string_set = set(string)
-    slice_set = digits | set(":")
-    point_set = digits | set(",.")
-
-    if string == "True":
-        STACKTRACE.pop()
-        return True
-    elif string == "False":
-        return False
-    elif string == "Nil":
-        return Nil
-    elif string == "None":
-        return None
-    elif string in Word.words:
-        return Word(string)
-    elif string[0] == "$":
-        return Variable(string[1:])
-    elif len(string_set - digits) == 0:
-        return int(string)
-    elif len(string_set - decimals) == 0:
-        return Decimal(string)
-    elif string[0] in string_quotes:
-        if string[0] != string[-1]:
-            STACKTRACE.add(
-                Stack(
-                    content=string,
-                    parent_pos=(1, pos + len(string) - 1),
-                    parent_text=full_string or string,
-                    file="<string>",
-                )
-            )
-            raise ShellsyNtaxError(
-                f"unterminated string literal:{string!r}",
-                STACKTRACE,
-            )
-        return str(string[1:-1])
-    elif string[0] == string[-1] == "/":
-        return Path(os.path.expandvars(string[1:-1]))
-    elif string[0] == "[" and string[-1] == "]":
-        if string == "[]":
-            return []
-        elif string == "[-]":
-            return {}
-        args = Arguments.from_string(string[1:-1])
-        if len(args.kwargs) == 0:
-            return args.args
-        else:
-            return args.kwargs
-    elif ":" in string and len(string_set - slice_set) == 0:
-        if len(string_set - slice_set) == 0:
-            return slice(*map(int, string.split(":")))
-        err = tuple(string_set - slice_set)
-        cpos = string.index(err[0]) + 1
-        STACKTRACE.add(
-            Stack(
-                content=string,
-                parent_pos=(1, cpos + pos),
-                parent_text=full_string or string,
-                file="<argument>",
-            )
-        )
-        raise ShellsyNtaxError(
-            f"unknown characters {err}" f"in string {string!r}",
-        )
-    elif len(string_set - point_set) == 0:
-        values = []
-        pos = 0
-        while pos < len(string):
-            begin = pos
-            if "," in string[pos:]:
-                end = string.index(",", pos)
-            else:
-                end = len(string)
-            STACKTRACE.add(
-                Stack(
-                    content=string[begin:end],
-                    parent_pos=(1, begin),
-                    parent_text=string,
-                    file="<Point>",
-                )
-            )
-            try:
-                dec = Decimal(string[begin:end])
-            except decimal.InvalidOperation as e:
-                raise ShellsyNtaxError(str(e)) from e
-            else:
-                values.append(dec)
-            finally:
-                pos = end + 1
-                STACKTRACE.pop()
-        return Point(map(Decimal, string.split(",")))
-    elif len(string) >= 2 and string[0] == "(" and string[-1] == ")":
-        if "#" in string:
-            if string[1 : (idx := string.index("#"))].isalpha():
-                return Expression(
-                    string[1:idx], string[idx + 1 : -1], fullstring=string
-                )
-            elif string[2 : (idx := string.index("#"))].isalpha():
-                return Expression(
-                    string[2:idx], string[idx + 1 : -1], fullstring=string
-                )
-        return Expression("py", string[1:-1], fullstring=string)
-    elif len(string) >= 2 and string[0] == "{" and string[-1] == "}":
-        return CommandBlock.from_string(string[1:-1])
-    else:
-        STACKTRACE.add(
-            Stack(
-                content=string,
-                parent_pos=(1, pos),
-                parent_text=full_string,
-                file="<arguments>",
-            )
-        )
-        raise ShellsyNtaxError(
-            f"unrecognised literal:{string!r}",
-        )
-
-
-@dataclass
-class Arguments:
-    args: list
-    kwargs: dict[str]
-    full_string: str
-    kwmaps: dict
-    argmaps: list
-
-    def __str__(self):
-        return f"({self.args}, {self.kwargs})"
+        def __init__(self, msg: str, text: str, begin: int, pos: int, end: int):
+            self.params = (msg, text, begin, pos, end)
 
     @classmethod
-    @annotate
-    def from_string(cls, string: str):
-        pos = 0
-        string_parts = []
-        # split string
-        while pos < len(string):
-            STACKTRACE.add(
-                Stack(
-                    content=string[pos:],
-                    parent_pos=(1, pos),
-                    parent_text=string,
-                    file="<call>",
-                )
-            )
-            if string[pos] in ("'\""):
-                quote = string[pos]
-                text = quote
-                pos += 1
-                while pos < len(string):
-                    if string[pos] == "\\":
-                        if len(string) == pos + 1:
-                            STACKTRACE.add(
-                                Stack(
-                                    content=string[pos:],
-                                    parent_pos=(1, pos),
-                                    parent_text=string,
-                                    file="<string>",
-                                )
-                            )
-                            raise ShellsyNtaxError(
-                                f"Escaped nothing at end of string:{string!r}",
-                                STACKTRACE,
-                            )
-                        elif string[pos + 1] in ("'\"\\"):
-                            text += string[pos + 1]
-                            pos += 2
-                        else:
-                            STACKTRACE.add(
-                                Stack(
-                                    content=string[pos : pos + 2],
-                                    parent_pos=(1, pos),
-                                    parent_text=string,
-                                    file="<string>",
-                                )
-                            )
-                            raise ShellsyNtaxError(
-                                (
-                                    f"unknown escape {string[pos:pos+2]!r} in"
-                                    f" {string!r}"
-                                ),
-                                STACKTRACE,
-                            )
-                    elif string[pos] == quote:
-                        pos += 1
-                        break
-                    else:
-                        text += string[pos]
-                        pos += 1
-                        if pos >= len(string):
-                            STACKTRACE.add(
-                                Stack(
-                                    content=string[pos - 1 :],
-                                    parent_pos=(1, pos - 1),
-                                    parent_text=string,
-                                    file="<string>",
-                                )
-                            )
-                            raise ShellsyNtaxError(
-                                (f"unterminated string literal"),
-                                STACKTRACE,
-                            )
-                string_parts.append((pos - len(text), text + quote))
-            elif string[pos] == "/":
-                begin = pos
-                pos += 1
-                while pos < len(string) and not (
-                    string[pos] == "/"
-                    and (len(string) == pos + 1 or string[pos + 1].isspace())
-                ):
-                    pos += 1
-                string_parts.append((begin, string[begin : pos + 1]))
-            elif string[pos] == "(":
-                chars = ("(", ")")
-                begin = pos
-                pos += 1
-                stack = []
-                while pos < len(string):
-                    if string[pos] == ")" and len(stack) == 0:
-                        break
-                    elif string[pos] in chars[0]:
-                        stack.append(string[pos])
-                    elif string[pos] in chars[1]:
-                        stack.pop()
-                    pos += 1
-                string_parts.append((begin, string[begin : pos + 1]))
-            elif string[pos] == "{":
-                chars = ("{", "}")
-                begin = pos
-                pos += 1
-                stack = []
-                while pos < len(string):
-                    if string[pos] == "}" and len(stack) == 0:
-                        break
-                    elif string[pos] in chars[0]:
-                        stack.append(string[pos])
-                    elif string[pos] in chars[1]:
-                        stack.pop()
-                    pos += 1
-                string_parts.append((begin, string[begin : pos + 1]))
-            elif string[pos] == "[":
-                chars = ("[", "]")
-                begin = pos
-                pos += 1
-                stack = []
-                while pos < len(string):
-                    if string[pos] == "]" and len(stack) == 0:
-                        break
-                    elif string[pos] in chars[0]:
-                        stack.append(string[pos])
-                    elif string[pos] in chars[1]:
-                        stack.pop()
-                    pos += 1
-                string_parts.append((begin, string[begin : pos + 1]))
-            elif not string[pos].isspace():
-                begin = pos
-                while len(string) > pos and not string[pos].isspace():
-                    pos += 1
-                string_parts.append((begin, string[begin:pos]))
+    def next_command_name(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        pos = begin
+        if len(text) == pos:
+            return None, pos
+        while len(text) > pos and text[pos] in cls.COMMAND_NAME:
             pos += 1
-            STACKTRACE.pop()
-        del pos
-        return cls.from_string_parts(
-            [(i, s) for i, s in string_parts if s], string=string
-        )
+        return text[begin:pos], pos
 
     @classmethod
-    @annotate
-    def from_string_parts(
-        cls,
-        string_parts: Iterable[str | tuple[int, str, str]],
-        string=None,
-    ):
-        args = []
-        kwargs = {}
-
-        string_parts = [
-            (1, s) if isinstance(s, str) else s for s in string_parts
-        ]
-
-        def is_key(string):
-            return string[0] == "-" and len(string) > 1 and string[1].isalpha()
-
-        for idx, (_, ch) in enumerate(string_parts[:]):
-            if ch == "#":
-                string_parts = string_parts[idx:]
-
-        idx = 0
-        while idx < len(string_parts):
-            pos, part = string_parts[idx]
-            if is_key(part):
-                key = part[1:]
-                val = "Nil"
-                if idx + 1 < len(string_parts) and not is_key(
-                    string_parts[idx + 1][1]
-                ):
-                    pos, val = string_parts[idx + 1]
-                    idx += 1
-                kwargs[key] = (pos, val)
+    def next_literal(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        pos = begin
+        if len(text) == pos:
+            return None, pos
+        for k in ("True", "False", "Nil", "None"):
+            if text[pos:].startswith(k):
+                return k, pos + len(k)
+        if text[pos] in cls.NUMBER:
+            return cls.next_number(text, pos)
+        elif text[pos] in cls.STRING_QUOTES:
+            return cls.next_string(text, pos)
+        elif text[pos] == "[":
+            k, end = cls.next_dict(text, pos)
+            if k is not None:
+                return k, end
             else:
-                args.append((pos, part))
-            idx += 1
-        # evaluate literals
-        argmaps = [
-            (pos, val)  # TODO: maybe simplify this if extra info not needed
-            for pos, val in args
-        ]
-        args = [
-            evaluate_literal(val, pos=pos, full_string=string)
-            for pos, val in args
-        ]
-        kwmaps = {key: (pos, val) for key, (pos, val) in kwargs.items()}
-        kwargs = {
-            key: evaluate_literal(val, pos=pos, full_string=string)
-            for key, (pos, val) in kwargs.items()
-        }
-        return Arguments(
-            args, kwargs, full_string=string, kwmaps=kwmaps, argmaps=argmaps
-        )
+                return cls.next_list(text, pos)
+        elif text[pos] == "/":
+            return cls.next_path(text, pos)
+        elif text[pos] == "$":
+            return cls.next_varname(text, pos)
+        else:
+            return None, begin
+
+    @classmethod
+    def next_key(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        pos = begin
+        if len(text) == pos or text[pos] != "-":
+            return None, pos
+        if len(text) > pos + 1 and text[pos + 1].isdigit():
+            return None, begin
+        while len(text) > pos and not text[pos].isspace():
+            pos += 1
+        return text[begin:pos], pos
+
+    @classmethod
+    def next_string(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin or text[begin] not in cls.STRING_QUOTES:
+            return None, begin
+        pos = begin + 1
+        while text[pos] != text[begin]:
+            if pos >= len(text):
+                raise cls.WrongLiteral(
+                    "unterminated string literal",
+                    text,
+                    begin,
+                    begin + 1,
+                    len(string),
+                )
+            if text[pos] == "\\":
+                pos += 2
+            else:
+                pos += 1
+        return text[begin : pos + 1], pos + 1
+
+    @classmethod
+    def next_number(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        pos = begin
+        if len(text) == pos:
+            return None, pos
+        while len(text) > pos and text[pos] in cls.NUMBER:
+            pos += 1
+        num = text[begin:pos]
+        if len(d := (set(num) - cls.NUMBER)) > 0:
+            idx = begin + min(num.index(t) for t in d)
+            raise cls.WrongLiteral(
+                "wrong number literal",
+                text,
+                begin,
+                idx,
+                idx + 1,
+            )
+        else:
+            return text[begin:pos], pos
+
+    @classmethod
+    def next_varname(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin or text[begin] != "$":
+            return None, begin
+        pos = begin + 1
+        while pos < len(text) and text[pos] != " ":
+            pos += 1
+        return text[begin : pos + 1], pos + 1
+
+    @classmethod
+    def next_list(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin or text[begin] != "[":
+            return None, begin
+        pos = begin + 1
+        while text[pos] != "]":
+            _, end = cls.next_literal(text, pos)
+            pos = end
+        return text[begin : pos + 1], pos + 1
+
+    @classmethod
+    def next_dict(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin or text[begin : begin + 2] != "[-":
+            return None, begin
+        if text[begin : begin + 3] == "[-]":
+            return "[-]", begin + 3
+        pos = begin + 1
+        while text[pos] != "]":
+            k, end = cls.next_key(text, pos)
+            if k is None:
+                k, end = cls.next_literal(text, pos)
+            if k is None:
+                raise cls.WrongLiteral(
+                    "Unterminated dict",
+                    text,
+                    begin,
+                    pos,
+                    pos + 1,
+                )
+            pos = end
+            while len(text) > pos and text[pos].isspace():
+                pos += 1
+            if pos >= len(text):
+                raise cls.WrongLiteral(
+                    "Unterminated dict",
+                    text,
+                    begin,
+                    pos,
+                    pos + 1,
+                )
+        return text[begin : pos + 1], pos + 1
+
+    @classmethod
+    def next_path(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin or text[begin] != "/":
+            return None, begin
+        pos = begin
+        while pos < len(text):
+            pos = text.find("/", pos + 1)
+            if pos < 0:
+                pos += len(text)
+            elif pos == len(text) - 1 or text[pos + 1] == " ":
+                break
+
+        else:
+            raise cls.WrongLiteral(
+                "Unterminated path",
+                text,
+                begin,
+                pos,
+                pos + 1,
+            )
+        return text[begin : pos + 1], pos + 1

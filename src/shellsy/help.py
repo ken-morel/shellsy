@@ -1,3 +1,26 @@
+"""
+Shellsy: An extensible shell program designed for ease of use and flexibility.
+
+This module serves as the entry point for the Shellsy application, allowing
+users
+to define commands and interact with the shell environment.
+
+Copyright (C) 2024  Ken Morel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import re
 
 from dataclasses import dataclass
@@ -71,9 +94,7 @@ class CommandHelp:
         param_help = []
         for param in cmd.params.params:
             if param.name in params:
-                param_help.append(
-                    ParamHelp.from_param(param, params[param.name])
-                )
+                param_help.append(ParamHelp.from_param(param, params[param.name]))
         return CommandHelp(
             command=cmd, param_help=param_help, return_help=ret, help=begin
         )
@@ -88,9 +109,9 @@ class CommandHelp:
         text += f"```python\n{self.command.signature}\n```\n"
         text += self.help + "\n\n"
         for phelp in self.param_help:
-            text += f"##### **{phelp.name}**"
+            text += f"## ***{phelp.name}***"
             if phelp.type is not _empty:
-                text += f" : *{phelp.type}*"
+                text += f" : `{phelp.type}`"
             if phelp.default is not _empty:
                 text += f" = `{phelp.default}`, "
             text += "`" + ("/", "/*", "*")[phelp.mode] + "`"
@@ -98,4 +119,5 @@ class CommandHelp:
             for ln in phelp.help.splitlines():
                 text += "    " + ln
             text += "\n\n"
+        text += "\n## Returns\n\n" + "return_help"
         return Markdown(text)
