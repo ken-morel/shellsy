@@ -23,7 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from decimal import Decimal
 from pathlib import Path
-from pyoload import *
+from pyoload import type_match
 import string
 
 from pyoload import annotate
@@ -41,7 +41,6 @@ class S_NameSpace(S_Object, dict):
     __slots__ = S_Object.__slots__
 
 
-@annotate
 class S_Command(S_Object):
     command: "Command"
     arguments: "CommandArguments"
@@ -54,7 +53,6 @@ class S_Command(S_Object):
         return self.command(self.args)
 
 
-@annotate
 class NilType(S_Object):
     _instance = None
 
@@ -134,7 +132,6 @@ class S_Variable(S_Object, str):
         return "$" + self
 
 
-@annotate
 class S_Expression(S_Object):
     evaluators = {}
     type: str
@@ -219,12 +216,10 @@ class _Parser:
     class WrongLiteral(Exception):
         params: tuple[str, str, int, int, int]
 
-        @annotate
         def __init__(self, msg: str, text: str, begin: int, pos: int, end: int):
             self.params = (msg, text, begin, pos, end)
 
     @classmethod
-    @annotate
     def next_command_name(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -236,7 +231,6 @@ class _Parser:
         return text[begin:pos], pos
 
     @classmethod
-    @annotate
     def next_literal(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -264,7 +258,6 @@ class _Parser:
             return None, begin
 
     @classmethod
-    @annotate
     def next_key(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -278,7 +271,6 @@ class _Parser:
         return text[begin:pos], pos
 
     @classmethod
-    @annotate
     def next_string(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -301,7 +293,6 @@ class _Parser:
         return text[begin : pos + 1], pos + 1
 
     @classmethod
-    @annotate
     def next_number(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -324,7 +315,6 @@ class _Parser:
             return text[begin:pos], pos
 
     @classmethod
-    @annotate
     def next_varname(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -336,7 +326,6 @@ class _Parser:
         return text[begin : pos + 1], pos + 1
 
     @classmethod
-    @annotate
     def next_list(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -349,7 +338,6 @@ class _Parser:
         return text[begin : pos + 1], pos + 1
 
     @classmethod
-    @annotate
     def next_dict(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1
@@ -384,7 +372,6 @@ class _Parser:
         return text[begin : pos + 1], pos + 1
 
     @classmethod
-    @annotate
     def next_path(cls, text: str, begin: int = 0) -> Next:
         while len(text) > begin and text[begin].isspace():
             begin += 1

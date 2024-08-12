@@ -1,3 +1,4 @@
+print("hallo")
 import sys
 from shellsy.shellsy import Shellsy
 from shellsy.settings import init
@@ -42,5 +43,9 @@ def enter_command_loop():
     Shellsy().cmdloop()
 
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+    # main()
+from shellsy.interpreter import S_Interpreter
+inter = S_Interpreter()
+while True:
+    print(inter.eval(input("> ")))

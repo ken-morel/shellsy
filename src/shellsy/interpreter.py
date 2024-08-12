@@ -21,15 +21,16 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .lang import *
+from .lang import _Parser, S_NameSpace, S_Literal, S_Command
+from .exceptions import StackTrace, ShellsyException, S_Exception, WrongLiteral
+from .shell import Shell, S_Arguments
+from .shellsy import Shellsy
 import os
 
 from decimal import Decimal
 from pathlib import Path
-from pyoload import annotate
 
 
-@annotate
 class S_Interpreter:
     scope: S_NameSpace
     shell: Shell
@@ -107,7 +108,7 @@ class S_Interpreter:
                             )
                         try:
                             val = self.evaluate_literal(lit, idx - len(lit), string)
-                        except exceptions.WrongLiteral as e:
+                        except WrongLiteral as e:
                             stack = e.stack()
                             if stack.xpos[0] != 0:
                                 self.stacktrace.pop()
@@ -126,7 +127,6 @@ class S_Interpreter:
                 self.stacktrace.pop()
             return S_Arguments(args, kwargs, string)
 
-    @annotate
     def evaluate_literal(self, string: str, pos=0, full_string=None) -> S_Literal:
         import decimal
 
@@ -149,7 +149,7 @@ class S_Interpreter:
             return S_Variable(string[1:])
         elif string[0] in _Parser.STRING_QUOTES:
             if string[0] != string[-1]:
-                raise exceptions.WrongLiteral(
+                raise WrongLiteral(
                     f"unterminated string literal",
                     full_string,
                     pos + len(string) - 1,
@@ -168,7 +168,7 @@ class S_Interpreter:
         elif ":" in string and len(string_set - _Parser.NUMBER | _Parser.SLICE) == 0:
             if len(d := (string_set - _Parser.SLICE)) > 0:
                 idx = pos + min(string.index(t) for t in d)
-                raise exceptions.WrongLiteral(
+                raise WrongLiteral(
                     "wrong slice",
                     full_string,
                     idx,
@@ -188,7 +188,7 @@ class S_Interpreter:
                 try:
                     dec = Decimal(string[begin:end])
                 except decimal.InvalidOperation as e:
-                    raise exceptions.WrongLiteral(
+                    raise WrongLiteral(
                         str(e),
                         full_string,
                         begin,
@@ -202,7 +202,7 @@ class S_Interpreter:
 
     def evaluate_expression(self, S_Expression, type, text, context):
         if type not in S_Expression.evaluators:
-            raise exceptions.WrongLiteral(
+            raise WrongLiteral(
                 f"Unrecognised expression prefix {type!r}",
             )
         return S_Expression.evaluators[type](self, text).evaluate()
