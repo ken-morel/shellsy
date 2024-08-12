@@ -58,9 +58,7 @@ setup(
     author_email="engonken8@gmail.com",
     maintainer="ken-morel",
     maintainer_email="engonken8@gmail.com",
-    description=(
-        "Python package for function intergrating you command line utilities"
-    ),
+    description=("Python package for function intergrating you command line utilities"),
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=deps,

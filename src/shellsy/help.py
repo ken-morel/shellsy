@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import re
 
 from dataclasses import dataclass
@@ -93,9 +94,7 @@ class CommandHelp:
         param_help = []
         for param in cmd.params.params:
             if param.name in params:
-                param_help.append(
-                    ParamHelp.from_param(param, params[param.name])
-                )
+                param_help.append(ParamHelp.from_param(param, params[param.name]))
         return CommandHelp(
             command=cmd, param_help=param_help, return_help=ret, help=begin
         )

@@ -5,7 +5,7 @@ This module serves as the entry point for the Shellsy application, allowing
 users
 to define commands and interact with the shell environment.
 
-Copyright (C) 2024  Ken Morel
+Copyright (C) 2024 ken-morel
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+
 from pyoload import annotate
 from dataclasses import dataclass, field
 from typing import Iterable
@@ -96,7 +97,8 @@ setup(
         os.mkdir(name)
     except FileExistsError:
         pass
-    open(f"{name}/__init__.py", "w").write(f"""\
+    open(f"{name}/__init__.py", "w").write(
+        f"""\
 {description!r}
 __version__ = {version!r}
 __author__ = {author!r}
@@ -104,14 +106,17 @@ __author__ = {author!r}
 # Do not import anything here!
 
 shellsy_config = {dict()!r}
-    """)
+    """
+    )
     open("README.md", "w").write(
         f"""\
 # {name}
 
 {description}
-""")
-    open(f"{name}/shellsy.py", "w").write(f"""\
+"""
+    )
+    open(f"{name}/shellsy.py", "w").write(
+        f"""\
 from shellsy.shell import *
 
 class shellsy(Shell):
@@ -122,7 +127,8 @@ class shellsy(Shell):
     @Command
     def echo(shell, val):
         return val
-    """)
+    """
+    )
 
 
 class Plugin:
