@@ -27,10 +27,6 @@ import os
 from .shell import *
 from pathlib import Path
 
-import pytest
-
-pytestmark = pytest.mark.skip(reason="Module is not testable, needs run")
-
 
 class Shellsy(Shell):
     """

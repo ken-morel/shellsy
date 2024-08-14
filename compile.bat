@@ -1,1 +1,1 @@
-pyinstaller src/main.py --icon shellsy.ico --name shellsy --distpath "build/windows/portable" --workpath "del" --splash shellsy.png --contents-directory "." --console --collect-all shellsy --noconfirm
+pyinstaller --noconfirm --onedir --console --icon "C:\shellsy\shellsy.ico" --name "shellsy" --contents-directory "." --splash "C:\shellsy\shellsy.png" --uac-admin --collect-all "shellsy"  "C:\shellsy\src\main.py"

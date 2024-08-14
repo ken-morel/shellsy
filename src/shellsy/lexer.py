@@ -939,12 +939,10 @@ class ShellsyLexer(RegexLexer):
             (r"(?<!\s)\s(?!\s)", Generic),
         ],
         "shellsy-statement": [
-            *[
-                (
-                    r"([\w\.]+\\b)",
-                    Name.Function,
-                )
-            ],
+            (
+                r"^[\w\._]+",
+                Name.Function,
+            ),
             (r"\\b\w+\\b", Keyword),
             (
                 r"^(\$)([\w_]+)\s*(\:?)",

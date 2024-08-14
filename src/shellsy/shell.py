@@ -31,6 +31,7 @@ from typing import Callable
 
 from .lang import *
 from .help import *
+from .exceptions import NoSuchCommand, ArgumentError
 
 
 @dataclass
@@ -126,7 +127,7 @@ class CommandParameters:
         for idx, param in enumerate(self.params):
             if param not in kwargs:
                 raise ArgumentError(
-                    f"missing argument for {param}", args.string, pos, raw
+                    f"missing argument for {param}", args.string, 0, args.string
                 )
 
         final_args = {}

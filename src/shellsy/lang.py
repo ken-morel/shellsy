@@ -211,6 +211,7 @@ class _Parser:
     SLICE = INTEGER | set(":")
     STRING_QUOTES = set("\"'`")
     POINT = DECIMAL | set(",")
+    VAR_NAME = set(string.ascii_letters + "01234567890_")
     Next = tuple[str | type(None), int]
 
     class WrongLiteral(Exception):
@@ -266,8 +267,11 @@ class _Parser:
             return None, pos
         if len(text) > pos + 1 and text[pos + 1].isdigit():
             return None, begin
-        while len(text) > pos and not text[pos].isspace():
+        pos += 1
+        while text[pos] in cls.VAR_NAME:
             pos += 1
+            if len(text) == pos:
+                return text[begin:pos], pos - 1
         return text[begin:pos], pos
 
     @classmethod
@@ -278,18 +282,18 @@ class _Parser:
             return None, begin
         pos = begin + 1
         while text[pos] != text[begin]:
+            if text[pos] == "\\":
+                pos += 2
+            else:
+                pos += 1
             if pos >= len(text):
                 raise cls.WrongLiteral(
                     "unterminated string literal",
                     text,
                     begin,
                     begin + 1,
-                    len(string),
+                    len(text),
                 )
-            if text[pos] == "\\":
-                pos += 2
-            else:
-                pos += 1
         return text[begin : pos + 1], pos + 1
 
     @classmethod
@@ -299,20 +303,12 @@ class _Parser:
         pos = begin
         if len(text) == pos:
             return None, pos
-        while len(text) > pos and text[pos] in cls.NUMBER:
-            pos += 1
-        num = text[begin:pos]
-        if len(d := (set(num) - cls.NUMBER)) > 0:
-            idx = begin + min(num.index(t) for t in d)
-            raise cls.WrongLiteral(
-                "wrong number literal",
-                text,
-                begin,
-                idx,
-                idx + 1,
-            )
+        for pos in range(pos, len(text)):
+            if text[pos] not in cls.NUMBER:
+                break
         else:
-            return text[begin:pos], pos
+            pos += 1
+        return text[begin:pos], pos
 
     @classmethod
     def next_varname(cls, text: str, begin: int = 0) -> Next:
@@ -321,7 +317,7 @@ class _Parser:
         if len(text) == begin or text[begin] != "$":
             return None, begin
         pos = begin + 1
-        while pos < len(text) and text[pos] != " ":
+        while pos < len(text) and text[pos] in cls.VAR_NAME:
             pos += 1
         return text[begin : pos + 1], pos + 1
 
@@ -334,6 +330,14 @@ class _Parser:
         pos = begin + 1
         while text[pos] != "]":
             _, end = cls.next_literal(text, pos)
+            if end >= len(text):
+                raise cls.WrongLiteral(
+                    "Unterminated list",
+                    text,
+                    begin,
+                    len(text) - 1,
+                    len(text),
+                )
             pos = end
         return text[begin : pos + 1], pos + 1
 
@@ -352,7 +356,7 @@ class _Parser:
                 k, end = cls.next_literal(text, pos)
             if k is None:
                 raise cls.WrongLiteral(
-                    "Unterminated dict",
+                    "Wrong key",
                     text,
                     begin,
                     pos,

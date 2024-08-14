@@ -51,6 +51,11 @@ class StackTrace:
         ypos: int = 1
 
         def show(self):
+            import rich
+            import rich.syntax
+            import rich.panel
+            from .lexer import lexer
+
             b, e = self.xpos
             file_name = (
                 f"[cyan]{self.file}[/cyan]"
@@ -65,7 +70,7 @@ class StackTrace:
             rich.print(
                 rich.syntax.Syntax(
                     self.line,
-                    lexer=lexer.lexer,
+                    lexer=lexer,
                     theme="monokai",
                 )
             )
