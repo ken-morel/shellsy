@@ -39,24 +39,6 @@ from ..settings import get_setting
 from ..settings import init
 from ..shell import Shell
 from ..shellsy import Shellsy
-from asyncio import ensure_future
-from asyncio import Future
-from prompt_toolkit.completion import PathCompleter
-from prompt_toolkit.layout.containers import ConditionalContainer
-from prompt_toolkit.layout.containers import Float
-from prompt_toolkit.layout.containers import HSplit
-from prompt_toolkit.layout.containers import VSplit
-from prompt_toolkit.layout.containers import Window
-from prompt_toolkit.layout.containers import WindowAlign
-from prompt_toolkit.layout.dimension import D
-from prompt_toolkit.widgets import Button
-from prompt_toolkit.widgets import Checkbox
-from prompt_toolkit.widgets import Dialog
-from prompt_toolkit.widgets import Label
-from prompt_toolkit.widgets import MenuContainer
-from prompt_toolkit.widgets import MenuItem
-from prompt_toolkit.widgets import SearchToolbar
-from prompt_toolkit.widgets import TextArea
 from typing import Optional
 
 
@@ -203,13 +185,15 @@ class S_Repl(cmd.Cmd):
             command = self.get_input()
             if command is None:
                 break
-            elif not command.strip():
+            elif not command.strip() or command.strip().startswith("#"):
                 continue
             else:
                 self.onecmd(command.strip())
 
     def onecmd(self, command: str):
-        if command == "#c_":
+        if command == "exit":
+            self.shouldrun = False
+        elif command == "#c_":
             rich.print(rich.markdown.Markdown(COPYRIGHT_NOTICE))
         elif command == "#w_":
             rich.print(rich.markdown.Markdown(WARANTY_NOTICE))
@@ -231,7 +215,7 @@ class S_Repl(cmd.Cmd):
                         "[yellow]out[/yellow]@[magenta]"
                         f"{len(self.context['out']) - 1}[/magenta]>"
                     ),
-                    repr(val),
+                    val,
                 )
 
     @comberload("prompt_toolkit.lexers")
@@ -355,7 +339,7 @@ class S_Repl(cmd.Cmd):
                 "cwdpath": "#ffff45",
                 "prompt": "#00aa00",
                 "path": "ansicyan underline",
-                "pygments.error": "bg:red",
+                "pygments.error": "bg:darkred",
                 "pygments.punctuation": "red",
             }
         )
@@ -422,11 +406,11 @@ class S_Repl(cmd.Cmd):
                     line[0] == "$"
                     and len(set(line[1:]) - set(ascii_letters + "_")) == 0
                 ):
-                    for v in self.context.resolved():
+                    for v in self.context.scope.resolved():
                         v = "$" + v
                         comps.append((similarity(line[1:], v), v))
                     StatusText(
-                        repr(context.get(line[1:])),
+                        repr(self.context.scope.get(line[1:])),
                         5,
                         source="__entry-var-values__",
                     )

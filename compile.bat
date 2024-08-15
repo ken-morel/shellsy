@@ -1,1 +1,1 @@
-pyinstaller --noconfirm --onedir --console --icon "C:\shellsy\shellsy.ico" --name "shellsy" --contents-directory "." --splash "C:\shellsy\shellsy.png" --uac-admin --collect-all "shellsy"  "C:\shellsy\src\main.py"
+pyinstaller --noconfirm --onedir --console --icon shellsy.ico --name shellsy --contents-directory "." --add-data shellsy.ico;. --add-data shellsy.png;. --add-data README.md;. --add-data LICENSE;. --uac-admin --collect-all shellsy  src/main.py

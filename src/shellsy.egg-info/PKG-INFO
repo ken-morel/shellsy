@@ -22,8 +22,18 @@ Classifier: Programming Language :: Python :: 3.12
 Classifier: Natural Language :: English
 Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Description-Content-Type: text/markdown
+Requires-Dist: pyoload
+Requires-Dist: prompt_toolkit
+Requires-Dist: comberload
+Requires-Dist: rich
+Requires-Dist: appdirs
 Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
 Provides-Extra: ci
+Requires-Dist: pytest; extra == "ci"
+Requires-Dist: pytest-cov; extra == "ci"
+Requires-Dist: coveralls; extra == "ci"
 
 Good day pythonista!
 

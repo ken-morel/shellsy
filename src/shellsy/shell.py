@@ -1,9 +1,6 @@
 """
-Shellsy: An extensible shell program designed for ease of use and flexibility.
-
-This module serves as the entry point for the Shellsy application, allowing
-users
-to define commands and interact with the shell environment.
+Shell.py, holds THe shell-related classes
+including Shell, S_Arguments
 
 Copyright (C) 2024 ken-morel
 
@@ -35,8 +32,17 @@ from .exceptions import NoSuchCommand, ArgumentError
 
 
 @dataclass
-@annotate
 class S_Arguments(S_Object):
+    """
+    Holds the arguments and code mappings to command call, has:
+
+    - **args**: `list[tuple[Any, tuple[int, str]]]`: the list of tuples
+      (`value`, (`pos`, `raw`)) mappings
+    - **kwargs**: `dict[tuple[str, int], tuple[Any, tuple[int, str]]]`:
+      the dictionnary mapping of tuples (`key`, `pos`) to
+      (`value`, (`pos`, `raw`)) mappings
+    - **string**: `str`: holds the raw arguments string
+    """
     __slots__ = ("args", "kwargs", "string")
     Val = tuple[Any, tuple[int, str]]
     Key = tuple[str, int]
@@ -46,8 +52,18 @@ class S_Arguments(S_Object):
 
 
 @dataclass
-@annotate
 class CommandParameter:
+    """
+    Contains an instance of a command parameter, holds
+
+    - **name**: `str`: the name of the parameter
+    - **type**: `Any`: the type of the parameter
+    - **default**: `Any`: the default value to the parameter
+    - **mode**: `int`: the mode of parameter, from
+      - **0**: positional only
+      - **1**: positional or keyword
+      - **0**: keyword only
+    """
     name: str
     type: Any
     default: Any
@@ -55,6 +71,12 @@ class CommandParameter:
 
     @classmethod
     def from_inspect_parameter(cls, param):
+        """
+        Creates a CommandParameter from inspect parameter instance
+
+        :param param: THe inspect parameter
+        :returns: THe CommandParameter instance
+        """
         mode = (
             param.POSITIONAL_ONLY,
             param.POSITIONAL_OR_KEYWORD,
@@ -76,11 +98,25 @@ class CommandParameter:
 
 
 class CommandParameters:
+    """
+    Holds a list of command parameters for the command
+    """
+    params: list[CommandParameter]
+
     def __init__(self, params):
+        """
+        Create th command parameters
+        :param params: The CommandParameter instances
+        """
         self.params = params
 
     @classmethod
     def from_function(cls, func):
+        """
+        Gets the commandparameters for a function from it's inspect signature
+        :param func: The function to get signature from
+        :returns: Th CommandParameters
+        """
         return cls(
             [
                 CommandParameter.from_inspect_parameter(p)
@@ -88,8 +124,13 @@ class CommandParameters:
             ]
         )
 
-    @annotate
     def bind(self, args: S_Arguments) -> dict[str, S_Literal]:
+        """
+        binds the given arguments to the contained parameters
+
+        :param args: The `S_Arguments` instance to bind
+        :returns: A dictionarry mapping of names to values
+        """
         kwargs = {}
         for idx, (val, (pos, raw)) in enumerate(args.args):
             if idx >= len(self.params):
@@ -149,8 +190,10 @@ class CommandParameters:
         return f"_({', '.join(map(str, self.params))})"
 
 
-@annotate
 class Command:
+    """
+    Holds a command instance and all it's dispatches
+    """
     params: CommandParameters
     dispatches: "list[Command]"
     __func__: Callable
@@ -158,7 +201,13 @@ class Command:
     name: str
     signature: Signature
 
-    def __init__(self, func: Callable):
+    def __init__(self, func: Callable, shell: "Optional[Shell]" = None):
+        """
+        Creates, initializes the Command with the given function.
+        :param func: THe function to construct command from
+        :param shell: optionally specify the shell(when it is a method of a
+        shell, the shell does this for You)
+        """
         from inspect import signature
 
         self.params = CommandParameters.from_function(func)
@@ -167,11 +216,16 @@ class Command:
         self.signature = signature(func)
         self.help = CommandHelp.from_command(self)
         self.dispatches = []
+        self.shell = shell
 
-    @annotate
     def __call__(self, args: "S_Arguments"):
+        """
+        Calls the Command with the given arguments
+        :param args: THe arguments
+        :raises RuntimeError: raised if the parent shell not yet set
+        """
         if self.shell is None:
-            raise RuntimeError(self, "was not attributed a shell")
+            raise RuntimeError(self.name, "was not attributed a shell")
         if len(self.dispatches) == 0:
             args = self.params.bind(args)
             return self.__func__(self.shell, **args)
@@ -193,11 +247,25 @@ class Command:
     def __set_name__(self, cls, name):
         self.name = name
 
-    def dispatch(self, func):
+    def dispatch(self, func: Callable):
+        """
+        Decorator to create a dispatch of the default command function, called
+        if arguments fail from binding.
+        :param func: THe function to add
+        """
         self.dispatches.append(Command(func))
+        return func
 
 
 class Shell:
+    """
+    The base of shelsy, a shell instance holds subshells, and commands,
+    what you will subclass.
+    """
+    name: str
+    parent: "Shell"
+    shellsy: "Shell"
+
     def __init_subclass__(cls):
         if not hasattr(cls, "name"):
             cls.name = cls.__name__.lower()
@@ -206,13 +274,19 @@ class Shell:
         if not hasattr(cls, "commands"):
             cls.commands = {}
 
-    def __init__(self, parent):
+    def __init__(self, parent: "Shell"):
+        """
+        Initializes the shell instance
+        :param parent: THe parent shell, usually a Shellsy() instance.
+        """
         self.parent = parent
         self.shellsy = parent.shellsy
 
         for attr in dir(self):
             if attr == "__entrypoint__":
-                self.commands["__entrypoint__"] = getattr(self, attr)
+                cmd = getattr(self, attr)
+                cmd.shell = self
+                self.commands["__entrypoint__"] = cmd
             if attr.startswith("__"):
                 continue
             try:
@@ -228,14 +302,32 @@ class Shell:
             except (AttributeError, TypeError):
                 pass
 
+    def get_interpreter(self):
+        """
+        Gets the shell interpreter from parent
+        :returns: THe interpreter instance
+        """
+        return self.shellsy.get_interpreter()
+
+    def set_interpreter(self, interp):
+        """
+        sets the Shellsy instances interpreter
+
+        :param interp: The new nterpreter
+        """
+        self._interpreter = interp
+
     def get_possible_subcommands(self):
         possible = list(self.commands)
         for sub, val in self.subshells.items():
             possible.extend([sub + "." + x for x in val.get_possible_subcommands()])
         return possible
 
-    @annotate
     def get_command(self, cmd: str):
+        """Recursively gets a command from dot sepperated subshell names
+        :param cmd: THe command path
+        :raises NoSuchCommand: The command name does not exist
+        """
         if cmd == "":
             if "__entrypoint__" in self.commands:
                 return self.commands["__entrypoint__"]
@@ -253,34 +345,18 @@ class Shell:
             else:
                 raise NoSuchCommand(f"no such subcommand to get {name!r}")
 
-    def run_file(self, path):
-        with open(path) as f:
-            try:
-                for line in f:
-                    line = line.strip()
-                    self.stacktrace.clear()
-                    self.stacktrace.add(
-                        content=line,
-                        parent_pos=(1, 0),
-                        parent_text=None,
-                        file=f"<{path}>",
-                    )
-                    if len(line) == 0 or line[0] == "#":
-                        continue
-                    else:
-                        try:
-                            val = self(line)
-                        except ShouldDispath:
-                            pass
-                        else:
-                            self.context["_"] = val
-                            self.context["out"].append(val)
-                            pprint(f"@{len(context['out']) - 1}>", val)
-            except ShellsyException as e:
-                e.show()
-        return self.context["_"]
+    def import_subshell(self, name: str, as_: 'Optional[str]' = None):
+        """
+        Imports the module {name}.shellsy, and saves the shellsy class in
+        th specified name.
 
-    def import_subshell(self, name, as_=None):
+        :param name: THe package name to import
+        :param as_: The subshell name to assign
+
+        :returns: The plugin shell instance
+
+        :raises ShellNotFound: THe shell could not be imported
+        """
         from importlib import import_module
 
         mod = import_module(name + ".shellsy")
@@ -290,7 +366,6 @@ class Shell:
             raise ShellNotFound(name + " has no shell: " + str(e)) from e
         else:
             from shellsy.lexer import for_shell
-
-            self.subshells[as_ or name] = plugin_shell(parent=self)
-            self.master._lexer = plugin_shell._lexer = for_shell(self.master)
-            return plugin_shell
+            shell = plugin_shell(parent=self)
+            self.subshells[as_ or name.split(".", 1)[0]] = shell
+            return shell

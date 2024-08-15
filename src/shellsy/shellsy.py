@@ -25,6 +25,7 @@ import json
 import os
 
 from .shell import *
+import rich
 from pathlib import Path
 
 
@@ -37,8 +38,10 @@ class Shellsy(Shell):
     This program comes with ABSOLUTELY NO WARRANTY; for details type `w_`.
     This is free software, and you are welcome to redistribute it
     under certain conditions; type `c_` for details."""
+    _interpreter = None
 
     def __init__(self):
+        self.shellsy = self
         for attr in dir(self):
             if attr == "__entrypoint__":
                 self.commands["__entrypoint__"] = getattr(self, attr)
@@ -56,6 +59,13 @@ class Shellsy(Shell):
                     self.subshells[attr] = subcls(self)
             except (AttributeError, TypeError):
                 pass
+
+    def get_interpreter(self):
+        """
+        Gets the current shellsy instance interpreter
+        :returns: The interpreter instance
+        """
+        return self._interpreter
 
     @Command
     def cd(shell, path: Path = None):
@@ -143,7 +153,7 @@ class Shellsy(Shell):
 
         :returns: val
         """
-        return repr(val)
+        return val
 
     @Command
     def print(shell, val):
@@ -358,7 +368,7 @@ class Shellsy(Shell):
         @Command
         def __entrypoint__(shell, command: str = None):
             if command:
-                pprint(shell.master.get_command(command).help.markdown())
+                rich.print(shell.shellsy.get_command(command).help.markdown())
             else:
                 log.error("no command specified")
 
@@ -412,10 +422,7 @@ class Shellsy(Shell):
     class yaml(Shell):
         @Command
         def load(shell, file: Path, var: S_Variable = None):
-            try:
-                import yaml
-            except ImportError:
-                return log.error("yaml not installed")
+            import yaml
             if not file.exists():
                 return log.error("file does not exist")
             text = file.read_text()
@@ -445,80 +452,3 @@ class Shellsy(Shell):
                     except Exception as e:
                         log.error("error writing to file: " + str(e))
                 return text
-
-    @Command
-    def exit(shell):
-        shell.should_run = False
-
-    @Command
-    def w_(shell):
-        """Shellsy waranty"""
-        from rich.markdown import Markdown
-        from rich import print
-
-        print(
-            Markdown(
-                """# Warranty Disclaimer
-
-                This program is distributed in the hope that it will be useful,
-                but **WITHOUT ANY WARRANTY**; without even the implied warranty
-                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-                For more details, refer to the [GNU General Public License]
-                (https://www.gnu.org/licenses/gpl-3.0.html).
-
-                ## Important Notes:
-                - You are advised to test the program extensively before using
-                  it in any critical applications.
-                - The authors and contributors of this software are not
-                  responsible for any damages that may occur through its use.
-                - If you encounter any issues, please consider reporting them
-                  to the respective maintainers for potential improvements.
-
-                Thank you for using our software!"""
-            )
-        )
-
-    @Command
-    def c_(shell):
-        """Shellsy waranty"""
-        from rich.markdown import Markdown
-        from rich import print
-
-        print(
-            Markdown(
-                """# License Information
-
-                This program is licensed under the
-                **GNU General Public License (GPL)**.
-
-                ## Key Points of the License:
-
-                - **Freedom to Use**: You are free to use this software for
-                  any purpose.
-                - **Access to Source Code**: You can view, modify, and
-                  distribute the source
-                  code.
-                - **Distribution**: When redistributing the software, you must
-                  provide the same license terms to others. This ensures that
-                  everyone can benefit from the freedoms granted by this
-                  license.
-
-                ## Disclaimer:
-                - This software is provided "as is", without any warranty of
-                  any kind, express or implied.
-                - For more details, please read the full text of the
-                  [GNU General Public License]
-                  (https://www.gnu.org/licenses/gpl-3.0.html).
-
-                ## Additional Information:
-                - If you modify this program and distribute it, you must
-                  include a copy of this license.
-                - Please contribute your improvements back to the community
-                  when possible.
-
-                Thank you for choosing our software and supporting open-source
-                development!
-                """
-            )
-        )

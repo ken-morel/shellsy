@@ -242,7 +242,11 @@ class _Parser:
             if text[pos:].startswith(k):
                 return k, pos + len(k)
         if text[pos] in cls.NUMBER:
-            return cls.next_number(text, pos)
+            txt, end = cls.next_slice(text, pos)
+            if txt is not None:
+                return txt, end
+            else:
+                return cls.next_number(text, pos)
         elif text[pos] in cls.STRING_QUOTES:
             return cls.next_string(text, pos)
         elif text[pos] == "[":
@@ -307,6 +311,46 @@ class _Parser:
             if text[pos] not in cls.NUMBER:
                 break
         else:
+            pos += 1
+        return text[begin:pos], pos
+
+    @classmethod
+    def next_slice(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        pos = begin
+        if len(text) == pos:
+            return None, pos
+        n = 0
+        last = begin - 1
+        for pos in range(pos, len(text)):
+            if text[pos] not in cls.NUMBER:
+                if n == 2:
+                    if pos - last == 1:
+                        raise cls.WrongLiteral(
+                            "Empty slice field",
+                            text,
+                            begin,
+                            last - 1,
+                            pos - 1,
+                        )
+                    break
+                elif text[pos] == ":":
+                    if pos - last == 1 or pos == len(text) - 1:
+                        raise cls.WrongLiteral(
+                            "Unterminated slice field",
+                            text,
+                            begin,
+                            pos,
+                            len(text),
+                        )
+                    n += 1
+                    last = pos
+                else:
+                    return None, begin
+        else:
+            if n < 1:
+                return None, begin
             pos += 1
         return text[begin:pos], pos
 

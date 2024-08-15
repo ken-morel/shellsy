@@ -21,7 +21,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .lang import _Parser, S_NameSpace, S_Literal, S_Command, Nil
+from .lang import _Parser, S_NameSpace, S_Literal, S_Command, Nil, S_Variable
 from .exceptions import (
     StackTrace,
     ShellsyException,
@@ -74,10 +74,14 @@ class S_Scope(dict):
         else:
             return super().__getitem__(item)
 
+    def get(self, item: str, default=None):
+        try:
+            return self[item]
+        except KeyError:
+            return default
+
     def __setitem__(self, item: str, value):
-        print(item, self.nonlocals)
         if item in self.nonlocals:
-            print("a in nonloc")
             for parent in self.parents:
                 if item in parent:
                     parent[item] = value
@@ -119,10 +123,13 @@ class S_Interpreter:
         context: Optional[S_Context] = None,
     ):
         self.shell = shell or Shellsy()
+        self.shell.set_interpreter(self)
         self.stacktrace = stacktrace or StackTrace()
         self.context = context or S_Context()
 
     def eval(self, line: str):
+        if line.strip().startswith("!"):
+            return os.system(line[1:])
         self.stacktrace.clear()
         command = self.parse_line(line)
         if isinstance(command, S_Command):
@@ -232,10 +239,28 @@ class S_Interpreter:
             return Nil
         elif string == "None":
             return None
+        elif string[0] == "$":
+            return S_Variable(string[1:])
         elif len(string_set - _Parser.INTEGER) == 0:
-            return int(string)
+            try:
+                return int(string)
+            except Exception as e:
+                raise WrongLiteral(
+                    str(e),
+                    full_string,
+                    pos,
+                    string,
+                )
         elif len(string_set - _Parser.NUMBER) == 0:
-            return Decimal(string)
+            try:
+                return Decimal(string)
+            except Exception as e:
+                raise WrongLiteral(
+                    str(e),
+                    full_string,
+                    pos,
+                    string,
+                )
         elif string[0] in _Parser.STRING_QUOTES:
             if string[0] != string[-1]:
                 raise WrongLiteral(

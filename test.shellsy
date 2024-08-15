@@ -1,1 +1,3 @@
 if (True) {echo 'hello True'} else {echo 'hello False'}
+echo "ello world"
+$a: 67

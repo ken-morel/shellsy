@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('shellsy.ico', '.'), ('shellsy.png', '.'), ('README.md', '.'), ('LICENSE', '.')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('shellsy')
@@ -22,20 +22,10 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-splash = Splash(
-    'shellsy.png',
-    binaries=a.binaries,
-    datas=a.datas,
-    text_pos=None,
-    text_size=12,
-    minify_script=True,
-    always_on_top=True,
-)
 
 exe = EXE(
     pyz,
     a.scripts,
-    splash,
     [],
     exclude_binaries=True,
     name='shellsy',
@@ -49,6 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    uac_admin=True,
     icon=['shellsy.ico'],
     contents_directory='.',
 )
@@ -56,7 +47,6 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    splash.binaries,
     strip=False,
     upx=True,
     upx_exclude=[],
