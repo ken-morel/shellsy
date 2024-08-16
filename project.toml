@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+    "setuptools",
+    "prompt_toolkit",
+    "comberload",
+    "pyoload",
+]
+build-backend = "setuptools.build_meta"
