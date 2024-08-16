@@ -1,4 +1,4 @@
-tt[build-system]
+[build-system]
 requires = [
     "setuptools",
     "prompt_toolkit",
