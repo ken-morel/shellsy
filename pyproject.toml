@@ -10,3 +10,34 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shellsy"
 version = "v1.0.0a1.dev1"
+authors = "ken-morel"
+classifiers = []↑
+dependencies
+
+description
+
+dynamic
+
+entry-points
+
+gui-scripts
+
+keywords
+
+license
+
+maintainers
+
+name
+
+optional-dependencies
+
+readme
+
+requires-python
+
+scripts
+
+urls
+
+versiontt5tttttttttttgg
