@@ -8,7 +8,19 @@ build-backend = "setuptools.build_meta"
 name = "shellsy"
 version = "v1.0.0a1.dev1"
 authors = "ken-morel"
-classifiers = []
+classifiers = [
+        "Intended Audience :: Developers",
+        "Development Status :: 2 - Pre-Alpha",
+        "License :: OSI Approved :: GPLv3.0 License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Natural Language :: English",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ]
 dependencies = [
     "prompt_toolkit",
     "comberload",
