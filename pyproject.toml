@@ -6,3 +6,7 @@ requires = [
     "pyoload",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "shellsy"
+version = "v1.0.0a1.dev1"
