@@ -1,9 +1,6 @@
 [build-system]
 requires = [
-    "setuptools",
-    "prompt_toolkit",
-    "comberload",
-    "pyoload",
+    "setuptools"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,8 +8,13 @@ build-backend = "setuptools.build_meta"
 name = "shellsy"
 version = "v1.0.0a1.dev1"
 authors = "ken-morel"
-classifiers = []↑
-dependencies
+classifiers = []
+dependencies = [
+    "prompt_toolkit",
+    "comberload",
+    "pyoload",
+    "rich"
+]
 
 description
 
