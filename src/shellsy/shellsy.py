@@ -143,7 +143,7 @@ class Shellsy(Shell):
 
         :returns: val
         """
-        return repr(val)
+        return val
 
     @Command
     def print(shell, val):
