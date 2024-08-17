@@ -23,7 +23,6 @@ classifiers = [
     ]
 dependencies = [
     "comberload",
-    "pyoload",
     "rich"
 ]
 
@@ -34,11 +33,12 @@ gui-scripts = "shellsy.ide.__main__:main"
 keywords = "shellsy console plugin prompt_toolkit rich"
 license = "GPLv3.0"
 maintainers = ["ken-morel"]
-optional-dependencies = [
-    "prompt_toolkit",
-    "ttkbootstrap"
-]
 readme = "README.md"
 requires-python = ">=3.10"
 #scripts
 #urls
+[project.optional-dependencies]
+gui = ["ttkbootstrap"]
+cli = [
+  "prompt_toolkit",
+]
