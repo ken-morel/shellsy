@@ -7,7 +7,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shellsy"
 version = "v1.0.0a1.dev1"
-authors = "ken-morel"
 classifiers = [
         "Intended Audience :: Developers",
         "Development Status :: 2 - Pre-Alpha",
@@ -20,7 +19,7 @@ classifiers = [
         "Programming Language :: Python :: 3.12",
         "Natural Language :: English",
         "Topic :: Software Development :: Libraries :: Python Modules",
-    ]
+]
 dependencies = [
     "comberload",
     "rich"
@@ -31,7 +30,12 @@ description = "Build over amongst in and expose your sets of command line utilit
 entry-points = "shellsy.__main__:main"
 keywords = "shellsy console plugin prompt_toolkit rich"
 license = "GPLv3.0"
-maintainers = ["ken-morel"]
+maintainers = [
+    {name="ken-morel", email="engonken8@gmail.com"}
+]
+authors = [
+    {name="ken-morel", email="engonken8@gmail.com"}
+]
 readme = "README.md"
 requires-python = ">=3.10"
 #scripts
