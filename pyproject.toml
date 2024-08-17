@@ -29,7 +29,7 @@ description = "Build over amongst in and expose your sets of command line utilit
 #dynamic
 entry-points = "shellsy.__main__:main"
 keywords = "shellsy console plugin prompt_toolkit rich"
-license = "GPLv3.0"
+license = "LICENSE"
 maintainers = [
     {name="ken-morel", email="engonken8@gmail.com"}
 ]
