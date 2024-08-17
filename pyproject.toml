@@ -29,7 +29,6 @@ dependencies = [
 description = "Build over amongst in and expose your sets of command line utilities"
 #dynamic
 entry-points = "shellsy.__main__:main"
-gui-scripts = "shellsy.ide.__main__:main"
 keywords = "shellsy console plugin prompt_toolkit rich"
 license = "GPLv3.0"
 maintainers = ["ken-morel"]
@@ -42,3 +41,8 @@ gui = ["ttkbootstrap"]
 cli = [
   "prompt_toolkit",
 ]
+[project.scripts]
+shellsy = "shellsy.__main__:main"
+
+[project.gui-scripts]
+shellsy.ide = "shellsy.ide.__main__:main"
