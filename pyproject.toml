@@ -22,36 +22,23 @@ classifiers = [
         "Topic :: Software Development :: Libraries :: Python Modules",
     ]
 dependencies = [
-    "prompt_toolkit",
     "comberload",
     "pyoload",
     "rich"
 ]
 
-description
-
-dynamic
-
-entry-points
-
-gui-scripts
-
-keywords
-
-license
-
-maintainers
-
-name
-
-optional-dependencies
-
-readme
-
-requires-python
-
-scripts
-
-urls
-
-versiontt5tttttttttttgg
+description = "Build over amongst in and expose your sets of command line utilities"
+#dynamic
+entry-points = "shellsy.__main__:main"
+gui-scripts = "shellsy.ide.__main__:main"
+keywords = "shellsy console plugin prompt_toolkit rich"
+license = "GPLv3.0"
+maintainers = ["ken-morel"]
+optional-dependencies = [
+    "prompt_toolkit",
+    "ttkbootstrap"
+]
+readme = "README.md"
+requires-python = ">=3.10"
+#scripts
+#urls
