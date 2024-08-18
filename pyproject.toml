@@ -27,7 +27,6 @@ dependencies = [
 
 description = "Build over amongst in and expose your sets of command line utilities"
 #dynamic
-entry-points = "shellsy.__main__:main"
 keywords = ["shellsy", "console", "plugin", "prompt_toolkit", "rich"]
 license = {file="LICENSE"}
 maintainers = [
