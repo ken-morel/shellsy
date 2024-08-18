@@ -48,7 +48,7 @@ cli = [
 shellsy = "shellsy.__main__:main"
 
 [project.gui-scripts]
-shellsy.ide = "shellsy.ide.__main__:main"
+shellsy-ide = "shellsy.ide.__main__:main"
 
 [project.urls]
 Homepage = "https://shellsy.vercel.app"
