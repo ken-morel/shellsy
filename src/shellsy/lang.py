@@ -31,6 +31,10 @@ from pyoload import annotate
 
 class S_Object:
     __slots__ = ()
+    __shellsy_evaluatable__ = True
+
+    def __call__(self):
+        return self
 
 
 class S_Point(S_Object, tuple):
@@ -43,7 +47,7 @@ class S_NameSpace(S_Object, dict):
 
 class S_Command(S_Object):
     command: "Command"
-    arguments: "CommandArguments"
+    args: "S_Arguments"
 
     def __init__(self, command: "Command", args: "S_Arguments"):
         self.command = command
@@ -92,9 +96,8 @@ S_Literal = (
     | list
     | dict
     | S_Object
-    | type(None)
     | bool
-    | NilType
+    | type(None)
 )
 
 
@@ -128,9 +131,28 @@ class Word(S_Object, metaclass=_Word_meta):
 
 
 class S_Variable(S_Object, str):
-    def __repr__(self):
-        return "$" + self
+    """
+    Stores an S variable name, and possibly cntext for evaluation.
+    """
+    scope: 'S_Scope;'
 
+    def __init__(self, name: str, scope: 'S_Scope'):
+        """
+        Creates variable with specified scope and name.
+        """
+        string.__init__(name)
+        self.scope = scope
+
+    def __repr__(self):
+        return f"${self}:{self()!r}"
+
+    def __call__(self, val=None):
+        """
+        Ggets the vriable woth the default value in case not found/
+        """
+        if val is not None:
+            self.scope[self] = val
+        return self.scope[self]
 
 class S_Expression(S_Object):
     evaluators = {}

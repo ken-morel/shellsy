@@ -240,7 +240,7 @@ class S_Interpreter:
         elif string == "None":
             return None
         elif string[0] == "$":
-            return S_Variable(string[1:])
+            return S_Variable(string[1:], self.scope)
         elif len(string_set - _Parser.INTEGER) == 0:
             try:
                 return int(string)

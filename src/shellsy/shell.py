@@ -176,6 +176,19 @@ class CommandParameters:
             if val == param.default:
                 final_args[param.name] = val
                 continue
+            if not type_match(val, param.type):
+                if param.type == S_Literal and hasattr(val, "__shellsy_evaluatable__"):
+                    val = val()
+                else:
+                    raise ArgumentError(
+                        (
+                            f"Argument {val!r} of type {type(val)!r}"
+                            f" invalid for param {param}"
+                        ),
+                        args.string,
+                        pos,
+                        text,
+                    )
             if param.type not in (_empty, Any) and not type_match(val, param.type)[0]:
                 raise ArgumentError(
                     f"Argument {val!r} invalid for param {param}",
