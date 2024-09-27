@@ -5,13 +5,18 @@
 			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
 			"name": "Anaconda Python Builder",
 			"selector": "source.python",
-			"shell_cmd": "\"python\" -u \"$file\""
-		}
+			"shell_cmd": "\"python\" -u \"$file\"",
+		},
+    {
+      "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+      "name": "Shellsy",
+      "shell_cmd": "py \"$project_path\"/src/main.py",
+    }
 	],
 	"folders":
 	[
 		{
-			"path": "."
+			"path": ".",
 		}
-	]
+	],
 }

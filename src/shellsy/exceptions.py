@@ -25,7 +25,10 @@ from dataclasses import dataclass
 from pyoload import annotate
 import comberload
 from .lang import S_Object
-
+import rich
+import rich.syntax
+import rich.panel
+import rich.markdown
 comberload(__package__ + ".lexer", "rich", "rich.panel", "rich.syntax")
 
 
@@ -51,9 +54,6 @@ class StackTrace:
         ypos: int = 1
 
         def show(self):
-            import rich
-            import rich.syntax
-            import rich.panel
             from .lexer import lexer
 
             b, e = self.xpos
@@ -62,19 +62,23 @@ class StackTrace:
                 if self.file[0] == "<"
                 else f"[blue underline]{self.file}[/blue underline]"
             )
-            file_info = (
-                f"File: {file_name}, line: [magenta]{self.ypos}"
-                f"[/magenta], Column: [magenta]{b}[/magenta]:"
-            )
-            rich.print(rich.panel.Panel(file_info, title="[red]At:"))
             rich.print(
-                rich.syntax.Syntax(
-                    self.line,
-                    lexer=lexer,
-                    theme="monokai",
+                rich.panel.Panel(
+                    rich.syntax.Syntax(
+                        self.line
+                        + "\n"
+                        + "_" * b
+                        + "^" * (e - b)
+                        + "_" * (len(self.line) - e),
+                        lexer=lexer,
+                        theme="monokai",
+                    ),
+                    title=(
+                        f"File: {file_name}, line: [magenta]{self.ypos}"
+                        f"[/magenta], Column: [magenta]{b}[/magenta]:"
+                    ),
                 )
             )
-            rich.print(" " * b + "^" * (e - b))
 
         def __eq__(self, other):
             return (
@@ -126,7 +130,11 @@ class ShellsyException(Exception):
 
     def show(self):
         self.stacktrace.show()
-        print(f"Exception: {self.__class__.__name__} {self.message}")
+        rich.print(
+            rich.markdown.Markdown(
+                f"**S_Exception** `{self.__class__.__name__}`: {self.message}"
+            )
+        )
 
 
 class S_Exception(S_Object, Exception):

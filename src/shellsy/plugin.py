@@ -54,8 +54,9 @@ def initialize_plugin(
     except FileExistsError:
         pass
     os.chdir(path)
-    open("setup.py", "w").write(
-        f"""\
+    if not Path("setup.py").exists() or accepted("setup.py found, do you want to override? "):
+        open("setup.py", "w").write(
+            f"""\
 import {name}
 from pathlib import Path
 from setuptools import setup
@@ -91,14 +92,15 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
 )
-"""
-    )
+    """
+        )
     try:
         os.mkdir(name)
     except FileExistsError:
         pass
-    open(f"{name}/__init__.py", "w").write(
-        f"""\
+    if not Path(f"{name}__init__.py").exists() or accepted(f"{name}__init__.py found, do you want to override? "):
+        open(f"{name}/__init__.py", "w").write(
+            f"""\
 {description!r}
 __version__ = {version!r}
 __author__ = {author!r}
@@ -106,17 +108,20 @@ __author__ = {author!r}
 # Do not import anything here!
 
 shellsy_config = {dict()!r}
-    """
+        """
     )
-    open("README.md", "w").write(
-        f"""\
+    if not Path(f"README.md").exists() or accepted(f"README.md found, do you want to override? "):
+
+        open("README.md", "w").write(
+            f"""\
 # {name}
 
 {description}
 """
-    )
-    open(f"{name}/shellsy.py", "w").write(
-        f"""\
+        )
+    if not Path(f"{name}/shellsy.py").exists() or accepted(f"{name}/shellsy.py found, do you want to override? "):
+        open(f"{name}/shellsy.py", "w").write(
+            f"""\
 from shellsy.shell import *
 
 class shellsy(Shell):
@@ -127,8 +132,8 @@ class shellsy(Shell):
     @Command
     def echo(shell, val):
         return val
-    """
-    )
+        """
+        )
 
 
 class Plugin:

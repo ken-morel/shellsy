@@ -25,6 +25,7 @@ import json
 import os
 
 from .shell import *
+from .exceptions import S_Exception
 import rich
 from pathlib import Path
 
@@ -86,7 +87,7 @@ class Shellsy(Shell):
 
     class bookmark(Shell):
         @Command
-        def __entrypoint__(shell, _: Word["as"], name: str):
+        def __entrypoint__(shell, _: S_Word["as"], name: str):
             """\
             Bookmarks the current directory, or simply adds it to the bookmarks
             list
@@ -247,13 +248,13 @@ class Shellsy(Shell):
             """
             from shellsy.plugin import Plugin
 
-            txt = ""
+            txt = "# Standard modules(installed at `shellsy_path`)\n"
             all = Plugin.list()
             for plug in all:
-                txt += f"- {plug.name} at {plug.module.__file__}\n"
+                txt += f"- `{plug.name}`\n"
             if len(all) == 0:
-                txt = "# No module here yet"
-            pprint(Markdown(txt))
+                txt = "## No module here yet"
+            rich.print(Markdown(txt))
             return all
 
         @Command
@@ -315,7 +316,7 @@ class Shellsy(Shell):
             os.system(f'pip install {path} --target "{plugin_dir}" --upgrade')
 
     @Command
-    def _import(shell, name: str):
+    def _import(shell, name: str | S_Word):
         """
         Loads the specified module by importing it
         :param name: The name of module to import
@@ -325,22 +326,32 @@ class Shellsy(Shell):
         try:
             shell.import_subshell(name)
         except (ImportError, ModuleNotFoundError) as e:
-            print(e)
+            raise S_Exception(
+                str(e).replace("'", "`") + "; _Are you sure it has a_ `.shell`?",
+                "import " +  name,
+                7,
+                name,
+            )
 
     @_import.dispatch
-    def _import_as(shell, location: str, _: Word["as"], name: str):
+    def _import_as(shell, location: str, _: S_Word["as"], name: str):
         try:
             shell.import_subshell(location, as_=name)
         except (ImportError, ModuleNotFoundError) as e:
-            print(e)
+            raise S_Exception(
+                str(e),
+                f"import {lacation} as {name}",
+                7,
+                lacation,
+            )
 
     @_import.dispatch
     def _import_or_install(
         shell,
         name: str,
-        _: Word["or"],
-        __: Word["install"],
-        ___: Word["from"],
+        _: S_Word["or"],
+        __: S_Word["install"],
+        ___: S_Word["from"],
         location: str | Path,
     ):
         try:
@@ -366,11 +377,18 @@ class Shellsy(Shell):
 
     class help(Shell):
         @Command
-        def __entrypoint__(shell, command: str = None):
-            if command:
-                rich.print(shell.shellsy.get_command(command).help.markdown())
+        def __entrypoint__(shell, command: str):
+            try:
+                command = shell.shellsy.get_command(command)
+            except NoSuchCommand:
+                raise S_Exception(
+                    "No such command",
+                    "help " + command,
+                    5,
+                    command,
+                )
             else:
-                log.error("no command specified")
+                rich.print(command.help.markdown())
 
     class json(Shell):
         @Command
@@ -388,6 +406,17 @@ class Shellsy(Shell):
             if not file.exists():
                 log.error("file does not exist")
             text = file.read_text()
+            try:
+                data = json.loads(text)
+            except Exception as e:
+                log.error(e)
+            else:
+                if var is not None:
+                    var.set(data)
+                return data
+
+        @load.dispatch
+        def _load(shell, text: str, var: S_Variable = None):
             try:
                 data = json.loads(text)
             except Exception as e:

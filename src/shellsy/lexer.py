@@ -108,8 +108,9 @@ class ShellsyLexer(RegexLexer):
     commenthelp = ["help"]
     tokens = {
         "root": [
-            (r"!", Punctuation, "bash"),
-            (r"#.+", Comment.Single),
+            (r"^!", Punctuation, "bash"),
+            (r"#.*", Comment.Single),
+            (r"(_*)(\^+)(_*)", bygroups(Punctuation, Error, Punctuation)),
             include("shellsy-statement"),
         ],
         "single-string": [
@@ -937,6 +938,7 @@ class ShellsyLexer(RegexLexer):
             (r"(-)(\w+)", bygroups(Punctuation, Name.Label)),
             (r"/", Punctuation, "pathcontent"),
             (r"(?<!\s)\s(?!\s)", Generic),
+            (r"[^\s]+", Name.Constant),
         ],
         "shellsy-statement": [
             (

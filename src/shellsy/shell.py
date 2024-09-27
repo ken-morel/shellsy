@@ -166,7 +166,7 @@ class CommandParameters:
             kwargs[param] = ((pos, raw), val)
 
         for idx, param in enumerate(self.params):
-            if param not in kwargs:
+            if param not in kwargs and param.default is _empty:
                 raise ArgumentError(
                     f"missing argument for {param}", args.string, 0, args.string
                 )
@@ -246,9 +246,9 @@ class Command:
             errors = []
             for cmd in [self] + self.dispatches:
                 try:
-                    args = cmd.params.bind(args, should_dispatch=True)
-                except ShouldDispath as e:
-                    errors.append(e.exception)
+                    args = cmd.params.bind(args)
+                except ArgumentError as e:
+                    errors.append(e)
                     continue
                 else:
                     return cmd.__func__(self.shell, **args)

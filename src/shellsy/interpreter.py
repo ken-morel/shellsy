@@ -21,7 +21,15 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .lang import _Parser, S_NameSpace, S_Literal, S_Command, Nil, S_Variable
+from .lang import (
+    _Parser,
+    S_NameSpace,
+    S_Literal,
+    S_Command,
+    Nil,
+    S_Variable,
+    S_Word,
+)
 from .exceptions import (
     StackTrace,
     ShellsyException,
@@ -110,6 +118,9 @@ class S_Context:
 
     def __setitem__(self, key, val):
         return self.scope.__setitem__(key, val)
+
+    def get(self, item: str):
+        return self.scope.get(item)
 
 
 class S_Interpreter:
@@ -240,7 +251,7 @@ class S_Interpreter:
         elif string == "None":
             return None
         elif string[0] == "$":
-            return S_Variable(string[1:], self.scope)
+            return S_Variable(string[1:], self.context)
         elif len(string_set - _Parser.INTEGER) == 0:
             try:
                 return int(string)
@@ -408,6 +419,8 @@ class S_Interpreter:
                 finally:
                     pos = end + 1
             return S_Point(map(Decimal, string.split(",")))
+        else:
+            return S_Word(string)
 
     def evaluate_expression(self, S_Expression, type, text, context):
         if type not in S_Expression.evaluators:

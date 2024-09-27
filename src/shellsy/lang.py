@@ -105,54 +105,47 @@ class _Word_meta(type):
     def __getitem__(self, items):
         if isinstance(items, str):
             items = (items,)
-        return tuple(map(Word, items))
+        return tuple(map(S_Word, items))
 
 
-class Word(S_Object, metaclass=_Word_meta):
+class S_Word(str, S_Object, metaclass=_Word_meta):
     _instances = {}
 
     def __new__(cls, name: str):
         if name not in cls._instances:
-            cls._instances[name] = super().__new__(cls)
-            cls._instances[name].name = name
+            cls._instances[name] = super().__new__(cls, name)
         return cls._instances[name]
-
-    def __repr__(self):
-        return self.name
-
-    def __reduce__(self):
-        return (self.__class__, ())
 
     def __instancecheck__(self, other):
         return other is self
 
-    def __hash__(self):
-        return hash(self.name)
 
-
-class S_Variable(S_Object, str):
+class S_Variable(S_Object):
     """
     Stores an S variable name, and possibly cntext for evaluation.
     """
-    scope: 'S_Scope;'
 
-    def __init__(self, name: str, scope: 'S_Scope'):
+    scope: "S_Scope"
+    name: str
+
+    def __init__(self, name: str, scope: "S_Scope"):
         """
         Creates variable with specified scope and name.
         """
-        string.__init__(name)
+        self.name = name
         self.scope = scope
 
     def __repr__(self):
-        return f"${self}:{self()!r}"
+        return f"${self.name}:{self()!r}"
 
     def __call__(self, val=None):
         """
         Ggets the vriable woth the default value in case not found/
         """
         if val is not None:
-            self.scope[self] = val
-        return self.scope[self]
+            self.scope[self.name] = val
+        return self.scope.get(self.name)
+
 
 class S_Expression(S_Object):
     evaluators = {}
@@ -239,7 +232,9 @@ class _Parser:
     class WrongLiteral(Exception):
         params: tuple[str, str, int, int, int]
 
-        def __init__(self, msg: str, text: str, begin: int, pos: int, end: int):
+        def __init__(
+            self, msg: str, text: str, begin: int, pos: int, end: int
+        ):
             self.params = (msg, text, begin, pos, end)
 
     @classmethod
@@ -282,7 +277,7 @@ class _Parser:
         elif text[pos] == "$":
             return cls.next_varname(text, pos)
         else:
-            return None, begin
+            return cls.next_word(text, pos)
 
     @classmethod
     def next_key(cls, text: str, begin: int = 0) -> Next:
@@ -463,4 +458,15 @@ class _Parser:
                 pos,
                 pos + 1,
             )
+        return text[begin : pos + 1], pos + 1
+
+    @classmethod
+    def next_word(cls, text: str, begin: int = 0) -> Next:
+        while len(text) > begin and text[begin].isspace():
+            begin += 1
+        if len(text) == begin:
+            return None, begin
+        pos = begin + 1
+        while pos < len(text) and not text[pos].isspace():
+            pos += 1
         return text[begin : pos + 1], pos + 1
